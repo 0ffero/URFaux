@@ -5,6 +5,10 @@ const consts = {
         FULL: 1
     },
 
+    dice: {
+        maxRolls: 3*2
+    },
+
     depths: {
         debug: 254,
 
@@ -13,6 +17,11 @@ const consts = {
         dice: 10,
         loading: 50,
         message: 80
+    },
+
+    durations: {
+        counterMove: 333,
+        popup: 500
     },
 
     playerPaths: {

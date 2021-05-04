@@ -2,6 +2,14 @@ String.prototype.capitalise = function() {
     return this.charAt(0).toUpperCase() + this.slice(1);
 }
 
+function framesToMs(_frames) {
+    if (Number.isInteger(_frames)) {
+        return 1000/60*_frames;
+    } else {
+        return false;
+    }
+}
+
 function generateRandomID(_g=false) {
     generatedID = '';
     let maxC = 8;
@@ -10,6 +18,19 @@ function generateRandomID(_g=false) {
         generatedID +=~~((Math.random()*9)+1).toString();
     }
     return generatedID;
+}
+
+function isVar(searchFor='Phaser') {
+    let message = '';
+    if (searchFor==='Phaser') { message = 'No variable passed... Searching for Phaser variable\n'; }
+    for(var q in window) { 
+        if(window.hasOwnProperty(q) && q===searchFor) {
+            message += `Found the variable '${searchFor}'`;
+            console.log(message);
+            return true;
+        }
+    }
+    return false;
 }
 
 function shuffle(array) {

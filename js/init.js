@@ -51,7 +51,13 @@ var startTime = new Date();
 function preload() {
     scene = this;
     let depth = consts.depths.loading;
-    scene.add.image(vars.canvas.cX,0,'loadingBG').setOrigin(0.5,0).setName('loadingBG').setDepth(depth);
+    let loadingBG = scene.add.image(vars.canvas.cX,-500,'loadingBG').setOrigin(0.5,0).setName('loadingBG').setDepth(depth);
+    scene.tweens.add({
+        targets: loadingBG,
+        y: 0,
+        duration: 1500,
+        ease: 'Quad'
+    })
     scene.add.image(vars.canvas.cX, vars.canvas.cY, 'loadingText').setName('loadingText').setDepth(depth+1);
 
     // start loading all the assets and intiialise localStorage
@@ -91,5 +97,7 @@ function create() {
 
     if (vars.DEBUG) {
         scene.add.text(vars.canvas.width, 0, `DEBUG ON. Game version: ${vars.version}\nInitialisation took ${totalTime}ms`).setAlign('right').setName('debugText').setOrigin(1,0).setColor('#0').setDepth(consts.depths.debug);
+        vars.debugFN.showDebugBoard();
+        quickGet = vars.phaserObject.quickGet;
     }
 }
