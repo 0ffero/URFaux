@@ -1,7 +1,7 @@
 var vars = {
     DEBUG: false,
 
-    version: 0.28,
+    version: 0.3,
 
     // APP
     animate: {
@@ -186,7 +186,7 @@ var vars = {
             if (vars.DEBUG) { duration = 0; }
             let depth = consts.depths.loading;
             // fade out the loading text
-            let oldText = scene.children.getByName('loadingText');
+            let oldText = vars.phaserObject.quickGet('loadingText');
             scene.tweens.add({
                 targets: oldText, alpha: 0,
                 duration: duration,
@@ -194,7 +194,7 @@ var vars = {
             })
 
             // fade out the old loading image
-            let oldImage = scene.children.getByName('loadingBG');
+            let oldImage = vars.phaserObject.quickGet('loadingBG');
             scene.tweens.add({
                 targets: oldImage, alpha: 0,
                 duration: duration*2,
@@ -228,7 +228,7 @@ var vars = {
         },
 
         pointsCount: (_p, _show=true)=> {
-            if (_p===null) { _p=scene.children.getByName('pointsCount'); } // when showing the points, the points text object is passed in, otherwise we have to grab it
+            if (_p===null) { _p=vars.phaserObject.quickGet('pointsCount'); } // when showing the points, the points text object is passed in, otherwise we have to grab it
             let alpha = _show === true ? 1 : 0;
             scene.tweens.add({
                 targets: _p,
@@ -262,8 +262,8 @@ var vars = {
 
         showBarrier: (_show=true)=> { // this deals with showing and hiding the barrier
             // when a players counter lands on "a4" a barrier shows. when they move away from it the barrier hides
-            scene.children.getByName('shield_1').setVisible(_show);
-            scene.children.getByName('shield_2').setVisible(_show);
+            vars.phaserObject.quickGet('shield_1').setVisible(_show);
+            vars.phaserObject.quickGet('shield_2').setVisible(_show);
         },
 
         showMessage: (_msg, _dur)=> { // variables have already been confirmed by this point
@@ -469,7 +469,7 @@ var vars = {
         getDiceObjects: ()=> {
             let diceObjects = [];
             [1,2,3,4].forEach( (dN)=> {
-                diceObjects.push(scene.children.getByName(`dice${dN}`));
+                diceObjects.push(vars.phaserObject.quickGet(`dice${dN}`));
             })
             return diceObjects;
         },
@@ -520,15 +520,16 @@ var vars = {
                     // check board position += points for counter
                     let newPos = board[_i+points];
                     let op = bPs[newPos].takenByPlayer;
-                    if (op!==currentPlayer && newPos!=='a4') {
-                        if (bPs[newPos].takenByPlayer!==currentPlayer) {
+                    if (currentPlayer!==op && newPos!=='a4') {
+                        if (op!==currentPlayer) {
                             validMoves.push([_p, newPos, op]);
+                            let taking = bPs[newPos].counterName;
                             // bounce this counter
                             let _o = vars.phaserObject.quickGet(counterID);
-                            _o.setData({ moveTo: newPos, moveFrom: _p });
+                            _o.setData({ moveTo: newPos, moveFrom: _p, taking: taking });
                             vars.animate.movableCounterBounce(_o);
                         }
-                    } 
+                    }
                 }
                 return true;
             })
@@ -602,8 +603,8 @@ var vars = {
                     gameObject.disableInteractive();
                     // fade out the loaded screen and text
                     // then start the game
-                    let bg = scene.children.getByName('loadedBG');
-                    let btn = scene.children.getByName('loadedButton');
+                    let bg = vars.phaserObject.quickGet('loadedBG');
+                    let btn = vars.phaserObject.quickGet('loadedButton');
                     let dur=2000;
                     if (vars.DEBUG) { dur=0; }
                     scene.tweens.add({
@@ -654,17 +655,12 @@ var vars = {
         },
 
         diceEnable: (_dice, _e=true)=> {
-            let dice = _dice;
             if (_e===true) {
-                console.log('👍 🎮 Enabling input on all dice.');
-                dice.forEach( (_d)=> {
-                    _d.setInteractive();
-                })
+                vars.DEBUG ? console.log('👍 🎮 Enabling input on all dice.') : null;
+                _dice.forEach( (_d)=> { _d.setInteractive(); })
             } else {
-                console.log('🛑 🎮 Disabling input on all dice.');
-                dice.forEach( (_d)=> {
-                    _d.disableInteractive();
-                })
+                vars.DEBUG ? console.log('🛑 🎮 Disabling input on all dice.') : null;
+                _dice.forEach( (_d)=> { _d.disableInteractive(); })
             }
         },
 
@@ -684,18 +680,11 @@ var vars = {
     player: {
         betterLuck: true, // this changes the chances of the die to roll a one from 25% to 50% as a lot of 0's were being thrown
         current: 1,
-        pointsTotal: 0,
-        diceComplete: 0,
+        pointsTotal: 0, diceComplete: 0,
 
         counters: {
-            white: {
-                atStart: [],
-                completed: [],
-            },
-            black: {
-                atStart: [],
-                completed: [],
-            }
+            white: { atStart: [], completed: [] },
+            black: { atStart: [], completed: [] }
         },
 
         init: ()=> {
@@ -705,14 +694,8 @@ var vars = {
         },
 
         betterLuckFn: ()=> {
-            console.log(' ...Better Luck Function');
-            let frameName = shuffle([1,2])[0];
-            if (frameName===1) {
-                frameName = 'dice1';
-            } else {
-                frameName = shuffle(Phaser.Utils.Array.NumberArray(2,4,'dice'))[0];
-            }
-            return frameName;
+            console.log(' 🏋🎲...Better Luck Function');
+            return shuffle([1,2])[0] === 1 ? 'dice1' : frameName = shuffle(Phaser.Utils.Array.NumberArray(2,4,'dice'))[0];
         },
 
         getCurrent: ()=> {
@@ -767,7 +750,8 @@ var vars = {
             let depth = dC.board;
 
             // draw the background (game board)
-            scene.add.image(vars.canvas.cX, vars.canvas.cY, 'gameBG').setInteractive().setName('gameBoard').setDepth(depth);
+            scene.add.image(vars.canvas.cX, vars.canvas.cY, 'sandBG').setInteractive().setName('sandBG').setDepth(depth);
+            scene.add.image(vars.canvas.cX, vars.canvas.cY, 'boardBG').setInteractive().setName('gameBoard').setDepth(depth);
 
             // draw the background for the dice area
             scene.add.image(1350, 550, 'whitePixel').setName('diceBlackBG').setTint(0x0).setAlpha(0.35).setDepth(depth+2).setScale(450,450).setOrigin(0);
@@ -804,8 +788,8 @@ var vars = {
             let startPosWhite = [ bPs.wS.x, bPs.wS.y];
             let startPosBlack = [ bPs.bS.x, bPs.bS.y];
             [1,2,3,4,5,6].forEach( (_c)=> {
-                let whiteCounter = scene.add.image(startPosWhite[0], startPosWhite[1],'counters').setFrame('wS').setDepth(depth).setAlpha(0).setName(`counterw_${_c}`).setData({moveFrom: '', moveTo: '', x: startPosWhite[0], y: startPosWhite[1], boardPosition: '' }).setInteractive();
-                let blackCounter = scene.add.image(startPosBlack[0], startPosBlack[1],'counters').setFrame('bS').setDepth(depth).setAlpha(0).setName(`counterb_${_c}`).setData({moveFrom: '', moveTo: '', x: startPosBlack[0], y: startPosBlack[1], boardPosition: '' }).setInteractive();
+                let whiteCounter = scene.add.image(startPosWhite[0], startPosWhite[1],'counters').setFrame('wS').setDepth(depth).setAlpha(0).setName(`counterw_${_c}`).setData({moveFrom: '', moveTo: '', x: startPosWhite[0], y: startPosWhite[1], boardPosition: '', taking: '' }).setInteractive();
+                let blackCounter = scene.add.image(startPosBlack[0], startPosBlack[1],'counters').setFrame('bS').setDepth(depth).setAlpha(0).setName(`counterb_${_c}`).setData({moveFrom: '', moveTo: '', x: startPosBlack[0], y: startPosBlack[1], boardPosition: '', taking: '' }).setInteractive();
                 scene.groups.whiteCounters.add(whiteCounter);
                 scene.groups.blackCounters.add(blackCounter);
             })
@@ -841,11 +825,11 @@ var vars = {
             // it is. update the UI
             let icon = _p===1 ? '🦳' : '🦱';
             console.log(`Next player is ${icon}`);
-            scene.children.getByName('playerText').setText(`Player ${_p}`)
+            vars.phaserObject.quickGet('playerText').setText(`Player ${_p}`)
         },
 
         rollTextSwitch: ()=> {
-            let txtObj = scene.children.getByName('rollText');
+            let txtObj = vars.phaserObject.quickGet('rollText');
             let oldText = txtObj.getData('old');
             let newText='';
             if (oldText==='') { newText = 'Please roll the dice'; }
@@ -862,8 +846,8 @@ var vars = {
         },
 
         showPlayerText: ()=> {
-            let pT = scene.children.getByName('playerText');
-            let rT = scene.children.getByName('rollText');
+            let pT = vars.phaserObject.quickGet('playerText');
+            let rT = vars.phaserObject.quickGet('rollText');
 
             let dur = vars.DEBUG ? 0 : 1000;
 
@@ -875,7 +859,7 @@ var vars = {
 
         showPointsCount: ()=> {
             let points = vars.player.pointsTotal;
-            let pC = scene.children.getByName('pointsCount');
+            let pC = vars.phaserObject.quickGet('pointsCount');
             pC.setText(points);
             vars.animate.pointsCount(pC, true);
         }

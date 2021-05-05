@@ -1,5 +1,7 @@
-if (vars.DEBUG===true) { console.log('Initialising...'); }
+vars.localStorage.init(); // initialise local storage vars or DEBUG will always be false
+vars.DEBUG ? console.log('%c🖫 🖫 🖫 🖫 🖫 🖫\n Initialising. \n🖫 🖫 🖫 🖫 🖫 🖫', 'font-size: 20px; background-color: #000; color: #fff; font-family: Consolas') : null;
 
+var game;
 var config = {
     title: "URFaux",
     type: Phaser.WEBGL,
@@ -37,8 +39,16 @@ var config = {
     }
 };
 
-var game = new Phaser.Game(config);
-
+fetch("./assets/fileList.json").then(response => {
+    return response.json(); 
+}).then( (data)=> { 
+    let fV = vars.files;
+    fV.fileSizes=data;
+    // by the time we can show a loading bar, the loadingScreen and Text will already have laoded, so we add them here
+    let fSV = fV.fileSizes;
+    fSV.details.loadedSize=fSV.files['loadingScreen.jpg'] + fSV.files['loadingText.png'];
+    game = new Phaser.Game(config);
+});
 
 /*
 █████ ████  █████ █      ███  █████ ████  
@@ -50,6 +60,39 @@ var game = new Phaser.Game(config);
 var startTime = new Date();
 function preload() {
     scene = this;
+
+    var progressBar = this.add.graphics().setDepth(254);
+    var progressBox = this.add.graphics().setDepth(253);
+    progressBox.fillStyle(0x222222, 0.8);
+    progressBox.fillRect(vars.canvas.cX-320, vars.canvas.cY*1.75, 640, 50);
+
+    scene.load.on('load', (_fileData)=> {
+        let fSName = _fileData.src.replace(/assets\/\w+\//,'')
+        let fFV = vars.files.fileSizes;
+        let fS = fFV.files;
+        let before = fFV.details.loadedSize;
+        let tot = fFV.details.totalSize;
+        if (fS[fSName]!==undefined) {
+            // add this amount to the loaded size variable
+            fFV.details.loadedSize+=fS[fSName];
+            // convert it to a percentage
+            let loadedPercent = Phaser.Math.Clamp(~~(fFV.details.loadedSize/tot*100)/100, 0.01, 1);
+            console.log(`Loaded ${fSName}. ${loadedPercent*100}% (Adding: ${fS[fSName]} to ${before} = ${fFV.details.loadedSize}, ${tot})`);
+            progressBar.clear();
+            progressBar.fillStyle(0xffffff, 1);
+            progressBar.fillRect(vars.canvas.cX-310, vars.canvas.cY*1.75+10, 620 * loadedPercent, 30);
+            if (loadedPercent===1) {
+                scene.tweens.add({
+                    targets: [progressBar,progressBox],
+                    alpha: 0,
+                    delay: 500,
+                    duration: 500
+                })
+            }
+        } else {
+            console.log(`${fS[fSName]} was not found int the list...`);
+        }
+    })
     let depth = consts.depths.loading;
     let loadingBG = scene.add.image(vars.canvas.cX,-500,'loadingBG').setOrigin(0.5,0).setName('loadingBG').setDepth(depth);
     scene.tweens.add({

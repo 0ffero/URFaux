@@ -3,7 +3,6 @@ vars.init = (stage=1)=> { // ENTRY POINT IS HERE
 
     console.log(`%cInitialising Stage ${stage}`, 'color: #00f000; font-size: 14px;');
     if (stage===1) { // preloader
-        v.localStorage.init(); // initialise local storage vars
         v.files.init(); // load all files
     }
 
@@ -73,10 +72,16 @@ vars.containers = {
 }
 
 vars.files = {
+    fileSizes: 0,
+    
     init: ()=> {
         let fV = vars.files;
         fV.audio.init();
         fV.images.init();
+    },
+
+    initNext: ()=> {
+
     },
 
     audio: {
@@ -91,7 +96,8 @@ vars.files = {
 
     images: {
         init: ()=> {
-            scene.load.image('gameBG',       'images/boardBG.jpg');
+            scene.load.image('sandBG',       'images/sand.jpg');
+            scene.load.image('boardBG',      'images/board.png');
             scene.load.atlas('counters',     'images/counters.png', 'images/counters.json');
             scene.load.atlas('dice',         'images/dice.png', 'images/dice.json');
             scene.load.image('loadedBG',     'images/loadedScreen.jpg');
