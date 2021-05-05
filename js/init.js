@@ -81,7 +81,7 @@ function create() {
 
     let endTime = new Date();
     let totalTime = endTime - startTime;
-    console.log(`Initialisation took ${totalTime}ms`);
+    console.log(`  ..Initialisation took ${totalTime}ms`);
 
 
     if (totalTime<maxTime && vars.DEBUG!==true) {
