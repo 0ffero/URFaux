@@ -13,7 +13,8 @@ const consts = {
         hex: {
             greens: [0x00b000,0x00bb00,0x00d000,0x00dd00, 0x00f000, 0x00ff00],
             reds: [0x900000, 0x990000, 0xb00000, 0xbb0000, 0xd00000, 0xdd0000, 0xf00000, 0xff0000]
-        }
+        },
+        shieldMaxColour: 48
     },
 
     dice: {

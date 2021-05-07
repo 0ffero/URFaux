@@ -1,11 +1,12 @@
 var vars = {
     DEBUG: false,
 
-    version: 0.45,
+    version: 0.6,
 
     // APP
     animate: {
         popupWait: -1,
+        shieldTween: false,
 
         bouncingCounters: [],
 
@@ -40,25 +41,39 @@ var vars = {
         },
 
         counterToEndPosition: (_oName)=> {
+            vars.DEBUG ? console.log(`Dropping counter ${_oName} to end position`) : null;
             let ctr = vars.phaserObject.quickGet(_oName);
             if (!ctr) {
                 console.error(`The counter (${_oName}) was NOT found!`);
                 return false;
             }
-            let xOffset = _oName.replace('counter','')[0] === 'b' ? -20: 0;
 
+            // black counters require a small offset to the x position
+            let col = _oName.replace('counter','')[0];
+            let xOffset = col === 'b' ? -20: 0;
+
+            // set the counters depth based on the amount of counters at end position
+            let completed = vars.player.counters.white.completed.length;
+            let depth = consts.depths.countersComplete + completed;
+            depth += col === 'b' ? 10 : 0; // move the black counters above the board (white depths = 2-8, black depths = 12-18)
+            ctr.setData({ finalDepth: depth });
+
+            // figure out the drop amount in px
             let maxDrop = 60;
-            let counterYDrop = maxDrop - (vars.player.counters.white.completed.length * 10)
+            let counterYDrop = maxDrop - (completed * 10)
+            // and animate
             scene.tweens.add({
                 targets: ctr,
                 x: ctr.x+xOffset, y: ctr.y+counterYDrop,
-                duration: 500
+                duration: 500,
+                onComplete: (_t, _o)=> { _o[0].setDepth(~~(_o[0].getData('finalDepth'))); _o[0].data.remove('finalDepth'); }
             })
         },
 
         counterToNewPosition: (_object)=> {
             let startPosition = _object.getData('moveFrom');
             let targetPosition = _object.getData('moveTo');
+            vars.DEBUG ? console.log(`Moving from ${startPosition} to ${targetPosition}`) : null;
             let objectColour = _object.name.replace('counter','')[0];
             let gV = vars.game;
             let pV = vars.player;
@@ -77,17 +92,17 @@ var vars = {
                 let counterIcon = '🞅';
                 if (counterName.replace('counter','')[0]==='w') {
                     counterIcon = '🞉';
-                    if (vars.DEBUG) { console.log(`${counterIcon} Pushing WHITE counter back onto start position`); }
+                    vars.DEBUG ? console.log(` ${counterIcon} Pushing WHITE counter back onto start position`) : null;
                     pC = pV.counters.white;
                 } else {
-                    if (vars.DEBUG) { console.log(`${counterIcon} Pushing BLACK counter back onto start position`); }
+                    vars.DEBUG ? console.log(` ${counterIcon} Pushing BLACK counter back onto start position`) : null;
                     pC = pV.counters.black;
                 }
                 pC.atStart.push(counterName);
             } else if (gV.startingCounter!=='') {
                 gV.startingCounter='';
             }
-            if (vars.DEBUG) { console.log(` 🞅 🡺 Moving counter with name ${_object.name} to ${targetPosition}`); }
+            vars.DEBUG ? console.log(` 🞅 🡺 Moving counter with name ${_object.name} to ${targetPosition}`) : null;
             vars.animate.counterBounceTweensStop();
             let counterPath = objectColour === 'w' ? [...consts.playerPaths.white] : [...consts.playerPaths.black];
             let counterMoves = gV.generateBoardPath(startPosition, targetPosition, counterPath);
@@ -101,6 +116,9 @@ var vars = {
                 let oldPos = vars.boardPositions[startPosition];
                 oldPos.takenByPlayer=0; oldPos.counterName='';
             }
+
+            // NOW. If we are moving from a4, we need to remove the shield
+            startPosition === 'a4' ? vars.animate.showBarrier(false) : null;
 
             // increase the counters depth so it moves above the other counters
             _object.setDepth(_object.depth+1);
@@ -120,7 +138,7 @@ var vars = {
         },
 
         counterToStart: (_cObject)=> {
-            //let x = _cObject.getData('x'); let y = _cObject.getData('y');
+            vars.DEBUG ? console.log(`Sending ${_cObject.name} to start position`) : null;
             let path = vars.game.generateBackToStartPath(_cObject);
 
             if (!path) {
@@ -151,6 +169,7 @@ var vars = {
         counterUpdateFrame: (_t, _o, _lastCounter)=> {
             let object = _o[0];
             let cName = object.name;
+            vars.DEBUG ? console.log(`Updating counter frame for ${cName}`) : null;
             let bPos = _lastCounter[0];
             let frameName = bPos[0]==='a' ? cName.replace('counter','')[0] + bPos : bPos;
             let lastMove = _lastCounter[1];
@@ -159,6 +178,7 @@ var vars = {
             // set this counters position using "set data on _o"
 
             if (lastMove===true) {
+                vars.DEBUG ? console.log(`  > The counter has reached its destination`) : null;
                 let pV = vars.player;
                 // WE NEED TO UPDATE THE COUNTER OBJECTS DATA
                 let x = object.x; let y = object.y;
@@ -197,6 +217,9 @@ var vars = {
                 // TEST IF THE PLAYER LANDED ON A "FREE SHOT" SQUARE
                 let pCol = cName.replace('counter','')[0];
                 if (bPos===`${pCol}4` || bPos===`${pCol}6` || bPos===`a4`) { // the current player gets another shot
+                    if (bPos==='a4') {
+                        vars.animate.showBarrier(true);
+                    }
                     vars.player.nextPlayer(true);
                 } else { // next players shot
                     vars.player.nextPlayer();
@@ -208,6 +231,7 @@ var vars = {
         },
 
         diceDrop: (_targets)=> {
+            vars.DEBUG ? console.log(`Dropping the dice.`) : null;
             let dur = 1000;
             if (vars.DEBUG) { dur=0; }
             _targets.forEach( (_t,i)=>{
@@ -232,6 +256,7 @@ var vars = {
         },
 
         diceDropShadows: (_targets)=> {
+            vars.DEBUG ? console.log(`Adding dice drop shadows`) : null;
             let dur = 1000;
             if (vars.DEBUG) { dur=0; }
             _targets.forEach( (_t,i)=> {
@@ -246,20 +271,50 @@ var vars = {
 
         initBarrier: ()=> {
             let depth = consts.depths.shield;
-            barrier = 'newBarrier';
-            let a = scene.add.image(1047, 251, 'shielded').setName('shield_1').setDepth(depth).setAlpha(0.05).setTint(0x00ff00).setVisible(false);
-            let b = scene.add.image(1047, 251, 'shielded').setName('shield_2').setDepth(depth).setAlpha(1).setTint(0x008000).setVisible(false);
-            scene.tweens.add({
+            let delay = 10;
+            let a = scene.add.image(1047, 251, 'shielded').setName('shield_1').setDepth(depth).setAlpha(0.3).setTint(0xff0000);
+            // set the shields data
+            a.setData({ h: 0, rev: false, currentDelay: delay, maxDelay: delay });
+
+            vars.animate.shieldTween = scene.tweens.add({
+                targets: a, alpha: 1,
+                yoyo: true, repeat: -1,
+                duration: 500,
+                onUpdate: (_t, _o)=> {
+                    let delay = _o.getData('currentDelay');
+                    if (delay!==0) { delay--; _o.setData('currentDelay', delay); return false; }
+
+                    // we only get here if the delay is 0
+                    // so, reset that delay
+                    _o.setData('currentDelay', _o.getData('maxDelay'));
+                    // and update the colour of the shield
+                    let rev = _o.getData('rev'); let colour = _o.getData('h');
+                    rev ? colour-- : colour++ ;
+                    _o.setData('h', colour);
+                    let color = new Phaser.Display.Color.HSLToColor(colour/256, 1, 0.50).color;
+                    _o.setTint(color);
+
+                    // is the new colour 0 or maxCol? if so reverse the counter direction
+                    let maxCol = consts.colours.shieldMaxColour;
+                    if (maxCol!==255) {
+                        colour===0 || colour===maxCol ? _o.setData('rev', !rev) : null;
+                    } else {
+                        colour===maxCol ? _o.setData('h', 0) : null;
+                    }
+                }
+            });
+
+            setTimeout( ()=> {
+                vars.animate.showBarrier(false);
+            }, 750)
+
+            //let b = scene.add.image(1047, 251, 'shielded').setName('shield_2').setDepth(depth).setAlpha(1).setTint(0x008000).setVisible(false);
+            /* scene.tweens.add({
                 targets: b, alpha: 0.05,
                 yoyo: true, repeat: -1,
                 duration: 1000
-            })
-
-            scene.tweens.add({
-                targets: a, alpha: 1,
-                yoyo: true, repeat: -1,
-                duration: 500
-            })
+            }) */
+            vars.DEBUG ? console.log(`Barrier for square a4 has been initialised`) : null;
         },
 
         loadingImageSwitch: ()=> {
@@ -298,12 +353,12 @@ var vars = {
         },
 
         movableCounterBounce: (_o)=> {
+            vars.DEBUG ? console.log(`    %c... bouncing movable counter with name ${_o.name}`, 'color: yellow') : null;
             vars.animate.bouncingCounters.push(scene.tweens.add({
                 targets: _o,
                 y: _o.y-20,
                 duration: 1000,
-                yoyo: true,
-                repeat: -1,
+                yoyo: true, repeat: -1,
                 ease: 'Quad'
             }))
         },
@@ -320,12 +375,12 @@ var vars = {
 
         randomiseDice: (_diceArray)=> {
             if (Array.isArray(_diceArray)) { // all 4 dice have been passed (default entry point)
+                vars.DEBUG ? console.log(`Randomising all dice`) : null;
                 _diceArray.forEach( (dO,i)=> {
                     scene.tweens.add({
                         targets: dO, alpha: 0,
                         duration: 250, delay: i*125,
-                        yoyo: true,
-                        onYoyo: vars.game.diceUpdate,
+                        yoyo: true, onYoyo: vars.game.diceUpdate,
                         onComplete: vars.game.diceUpdate
                     })
                 })
@@ -334,8 +389,7 @@ var vars = {
                 scene.tweens.add({
                     targets: _diceArray, alpha: 0,
                     duration: 250,
-                    yoyo: true,
-                    onYoyo: vars.game.diceUpdate,
+                    yoyo: true, onYoyo: vars.game.diceUpdate,
                     onComplete: vars.game.diceUpdate
                 })
             }
@@ -343,11 +397,14 @@ var vars = {
 
         showBarrier: (_show=true)=> { // this deals with showing and hiding the barrier
             // when a players counter lands on "a4" a barrier shows. when they move away from it the barrier hides
+            vars.DEBUG ? console.log(`Player has landed on a4. Showing barrier.`) : null;
             vars.phaserObject.quickGet('shield_1').setVisible(_show);
-            vars.phaserObject.quickGet('shield_2').setVisible(_show);
+            _show ? vars.animate.shieldTween.resume() : vars.animate.shieldTween.pause();
+            //vars.phaserObject.quickGet('shield_2').setVisible(_show);
         },
 
         showMessage: (_msg, _dur)=> { // variables have already been confirmed by this point
+            vars.DEBUG ? console.log(`Generating pop up`) : null;
             let bg = vars.phaserObject.quickGet('popupBG');
             // set the message
             let msgText = vars.phaserObject.quickGet('popupText');
@@ -357,9 +414,7 @@ var vars = {
             let yoyo = true; let hold = _dur;
             let oC = null;
             if (_dur===-1) { // this pop up doesnt disappear until its clicked
-                yoyo = false;
-                hold = null;
-                bg.setInteractive();
+                yoyo = false; hold = null; bg.setInteractive();
             }
             let duration = consts.durations.popup;
             // MESSAGE TEXT
@@ -380,7 +435,7 @@ var vars = {
 
         startingCounter: (_cID, _moveTo) => {
             let playerColour = _cID.replace('counter','')[0] === 'w' ? 'white' : 'black';
-            console.log(`Showing starter counter for ${playerColour}`);
+            console.log(`  > Showing starter counter for ${playerColour}`);
             let counter = vars.phaserObject.quickGet(_cID);
             counter.setData({ 'moveTo': _moveTo, 'moveFrom': _moveTo[0] + 'S' });
             scene.tweens.add({
@@ -402,10 +457,12 @@ var vars = {
         },
 
         playSound: function(_key) {
+            vars.DEBUG ? console.log(`🎵 Playing audio with name ${_key}`) : null;
             scene.sound.play(_key);
         },
 
         rollDice: ()=> {
+            vars.DEBUG ? console.log(`🎵 🎲 Selecing random dice roll audio`) : null;
             vars.audio.playSound(shuffle(vars.audio.dice)[0]);
         }
     },
@@ -431,8 +488,9 @@ var vars = {
         },
 
         checkForWin: (_counterArray)=> {
+            vars.DEBUG ? console.log(`Checking for win`) : null;
             if (!Array.isArray(_counterArray)) {
-                console.error('Check for win requires an array to be passed to it!');
+                console.error('🚨 Check for win requires an array to be passed to it!');
                 return false;
             }
             return _counterArray.length === 6 ? true : false;
@@ -445,7 +503,9 @@ var vars = {
             let diceArray = vars.game.getDiceObjects();
             vars.input.diceEnable(diceArray, true);
             // reset all the dice data
+            console.groupCollapsed('Reseting all dice')
             diceArray.forEach( (d)=> { vars.game.resetDiceData(d); })
+            console.groupEnd();
         },
 
         diceUpdate: (_tween, _object)=> {
@@ -529,7 +589,7 @@ var vars = {
             let col=_object.name.replace('counter','')[0];
             let colour = col === 'w' ? 'white' : 'black';
             let endPosition = `${col}S`;
-            vars.DEBUG ? console.log(`Start Position: ${startPosition}, End Position: ${endPosition}`) : null;
+            vars.DEBUG ? console.log(`Generating path back to start position (${endPosition}) from ${startPosition}`) : null;
             let path = [...consts.playerPaths[colour]];
             path = path.reverse();
 
@@ -543,7 +603,7 @@ var vars = {
                 console.error('Unable to generate a path back to start');
                 return false;
             }
-            vars.DEBUG ? console.log(`Path found from position ${sI} to position ${eI}`) : null;
+            vars.DEBUG ? console.log(`  > path in array found. Positions ${sI} to ${eI}`) : null;
             return path.splice(sI+1,eI);
         },
 
@@ -628,28 +688,37 @@ var vars = {
             // limit the search for counters to "colours End" minus "points"
             let ignoreFrom = board[board.length-points];
             let found = false;
-            board.every( (_p, _i)=> {
+            board.every( (_p, _i)=> { // CHECK EVERY BOARD POSITION FOR THIS PLAYERS COUNTERS
                 if (_p===ignoreFrom) { found=true; }
                 if (found===true) { return false; }
                 // then we can check each of the positions for a valid move
                 let takenByPlayer = bPs[_p].takenByPlayer;
                 let counterID = bPs[_p].counterName;
-                if (takenByPlayer === currentPlayer) {
-                    console.log(`Found a counter at board position ${_p} for player ${currentPlayer}`);
+                if (takenByPlayer === currentPlayer) { // THIS IS THE CURRENT PLAYERS COUNTER. NOW CHECK TO SEE IF THE MOVE WOULD BE VALID
+                    vars.DEBUG ? console.log(`  %cFound a counter at board position ${_p} for player ${currentPlayer}`, 'color: green; font-size: 12px;') : null;
+
+                    // CHECK FOR VALID MOVE
                     // check board position += points for counter
                     let newPos = board[_i+points];
-                    let op = bPs[newPos].takenByPlayer;
-                    if (currentPlayer!==op && newPos!=='a4') {
-                        if (op!==currentPlayer) {
-                            validMoves.push([_p, newPos, op]);
+                    let ownedBy = bPs[newPos].takenByPlayer; // this can be 0 (no one) 1 (player 1/white) or 2 (player 2/black)
+                    if (currentPlayer!==ownedBy) { // this position has been taken by the other player
+                        let _o = vars.phaserObject.quickGet(counterID);
+                        if (newPos!=='a4') { // if it isnt a4, then the piece can be taken, hence, valid move.
+                            validMoves.push([_p, newPos, ownedBy]);
                             // deal with counters that reach the end of the board (as the counter names are in an array for this position) and dont hold a single counter name
                             let taking = bPs[newPos].counterName;
                             if (Array.isArray(taking)) { taking=''; }
-                            // bounce this counter
-                            let _o = vars.phaserObject.quickGet(counterID);
                             _o.setData({ moveTo: newPos, moveFrom: _p, taking: taking });
+                            // bounce this counter
                             vars.animate.movableCounterBounce(_o);
                         }
+                        if (newPos==='a4' && ownedBy===0) { // if the new position is a4 and it isnt taken by a player
+                            _o.setData({ moveTo: newPos, moveFrom: _p, taking: '' });
+                            // bounce this counter
+                            vars.animate.movableCounterBounce(_o);
+                        }
+                    } else {
+                        vars.DEBUG ? console.log('    %c... its currently blocked :(', 'color: red') : null;
                     }
                 }
                 return true;
@@ -657,8 +726,8 @@ var vars = {
 
 
             if (validMoves.length>0) {
-                console.log(`😀 ${validMoves.length} valid move(s) found`);
-                console.log(validMoves);
+                vars.DEBUG ? console.log(`😀 ${validMoves.length} valid move(s) found`) : null;
+                vars.DEBUG ? console.log(validMoves) : null;
             } else {
                 console.log('😕 No valid moves were found!');
                 return false;
@@ -667,12 +736,14 @@ var vars = {
             return validMoves;
         },
 
-        resetDiceData: (_o)=> {
+        resetDiceData: (_o, _newGame=false)=> {
             _o.setData({ rollNumber: 0 })
-            //_o.setFrame('dice1');
+            vars.DEBUG ? console.log(`  Die with name ${_o.name} has been reset.`) : null;
+            _newGame===false ? null : _o.setFrame('dice1');
         },
 
         rollDice: ()=> {
+            vars.DEBUG ? console.log(`Roll Dice called.`) : null;
             // disable input - this needs re-written to simply disable all dice
             //vars.input.setEnabled(false);
             // change the roll text
@@ -716,8 +787,6 @@ var vars = {
             // now we need to push this counter name back onto the at start var
             let colourFull = colour === 'w' ? 'white' : 'black';
             vars.player.counters[colourFull].atStart.push(_objectName);
-        
-            
         }
 
     },
@@ -788,18 +857,17 @@ var vars = {
         countersEnable: (_enable=true)=> {
             let oldI = -1;
             let swap;
+            let only = vars.player.current === 1 ? 'whiteCounters' : 'blackCounters';
             let doingText = _enable===true ? 'Enabling ' : 'Disabling ';
             ['blackCounters','whiteCounters'].forEach( (_cC, i)=> {
                 swap = false;
                 if (oldI!==i) { oldI=i; console.groupCollapsed(doingText + _cC); swap=true; }
                 scene.groups[_cC].children.each( (_c)=> {
-                    //console.log(_c.name);
-                    //console.log(_c.data.list);
-                    if (_enable===false) { // we are disabling the coutners. Clear their data
+                    if (_enable===false) { // we are disabling the counters. Clear their data
                         _c.setData({ moveTo: '', moveFrom: '' })
                         _c.disableInteractive();
                     } else {
-                        _c.setInteractive();
+                        _cC === only ?  _c.setInteractive() : null; // only activate the current players counters
                     }
                 });
                 if (swap===true) { console.groupEnd(); }
