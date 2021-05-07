@@ -17,22 +17,26 @@ const consts = {
     },
 
     dice: {
-        maxRolls: 3*2
+        maxRolls: 3*2,
+        positions: [[1500,700], [1650,700], [1500,840], [1650,840]]
     },
 
     depths: {
         debug: 254,
-
-        board: 5,
-        counters: 10,
-        dice: 10,
+        sand: 1,
+        countersComplete: 2, // depth of counters when they get to their finish position
+        board: 10,
+        counters: 15, // depth while counters are on the board
+        dice: 15,
+        shield: 20,
         loading: 50,
         message: 80
     },
 
     durations: {
         counterMove: 333,
-        popup: 500
+        popup: 500,
+        oneMinute: 60000
     },
 
     playerPaths: {

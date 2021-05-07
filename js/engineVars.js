@@ -21,6 +21,8 @@ vars.init = (stage=1)=> { // ENTRY POINT IS HERE
         v.UI.init();
         v.game.init();
         v.player.init();
+
+        vars.DEBUG ? vars.debugFN.attackLaneInit() : null;
     }
 }
 
@@ -155,10 +157,7 @@ vars.phaserObject = {
     },
 
     quickGet: (_oN=null)=> {
-        if (_oN===null) {
-            return false;
-        }
-
+        if (_oN===null) { return false; }
         return scene.children.getByName(_oN);
     }
 }

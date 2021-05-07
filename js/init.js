@@ -61,8 +61,9 @@ var startTime = new Date();
 function preload() {
     scene = this;
 
-    var progressBar = this.add.graphics().setDepth(254);
-    var progressBox = this.add.graphics().setDepth(253);
+    let dDepth = consts.depths.debug;
+    var progressBar = this.add.graphics().setDepth(dDepth);
+    var progressBox = this.add.graphics().setDepth(dDepth-1);
     progressBox.fillStyle(0x222222, 0.8);
     progressBox.fillRect(vars.canvas.cX-320, vars.canvas.cY*1.75, 640, 50);
 
@@ -77,7 +78,7 @@ function preload() {
             fFV.details.loadedSize+=fS[fSName];
             // convert it to a percentage
             let loadedPercent = Phaser.Math.Clamp(~~(fFV.details.loadedSize/tot*100)/100, 0.01, 1);
-            console.log(`Loaded ${fSName}. ${loadedPercent*100}% (Adding: ${fS[fSName]} to ${before} = ${fFV.details.loadedSize}, ${tot})`);
+            vars.DEBUG ? console.log(`${~~(loadedPercent*100)}% - Loaded ${fSName}. (Adding: ${fS[fSName]/1000}KB to ${before/1000}KB = ${fFV.details.loadedSize/1000}KB of ${tot/1000}KB)`): null;
             progressBar.clear();
             progressBar.fillStyle(0xffffff, 1);
             progressBar.fillRect(vars.canvas.cX-310, vars.canvas.cY*1.75+10, 620 * loadedPercent, 30);
@@ -90,7 +91,7 @@ function preload() {
                 })
             }
         } else {
-            console.log(`${fS[fSName]} was not found int the list...`);
+            console.log(`Loaded ${fS[fSName]}, but it was NOT found in the file list...`);
         }
     })
     let depth = consts.depths.loading;
@@ -138,9 +139,11 @@ function create() {
     // waiting for the user to click the start button
 
 
-    if (vars.DEBUG) {
+    if (vars.DEBUG && window.location.host==='offero04.io') {
         scene.add.text(vars.canvas.width, 0, `DEBUG ON. Game version: ${vars.version}\nInitialisation took ${totalTime}ms`).setAlign('right').setName('debugText').setOrigin(1,0).setColor('#0').setDepth(consts.depths.debug);
         vars.debugFN.showDebugBoard();
         quickGet = vars.phaserObject.quickGet;
+    } else {
+        vars.DEBUG=false;
     }
 }

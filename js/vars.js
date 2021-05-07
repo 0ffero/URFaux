@@ -1,14 +1,17 @@
 var vars = {
     DEBUG: false,
 
-    version: 0.3,
+    version: 0.45,
 
     // APP
     animate: {
+        popupWait: -1,
+
         bouncingCounters: [],
 
         init: function() {
-            
+            console.log('  ..initialising animations and vars');
+             vars.animate.popupWait=0;
         },
 
         counterBounceTweensStop: ()=> {
@@ -22,10 +25,43 @@ var vars = {
             vars.animate.bouncingCounters = [];
         },
 
+        counterFadeOut: (_t,_o)=> {
+            console.log(`Fading out ${_o[0].name}`);
+            let bPs = vars.boardPositions;
+            let frameName = `${_o[0].frame.name[0]}S`;
+            let x = bPs[frameName].x; let y = bPs[frameName].y;
+            _o[0].setFrame(frameName).setDepth(_o[0].depth-1);
+            _o[0].setData({ boardPosition: '', x: x, y: y });
+            scene.tweens.add({
+                targets: _o[0],
+                alpha: 0,
+                duration: 500
+            })
+        },
+
+        counterToEndPosition: (_oName)=> {
+            let ctr = vars.phaserObject.quickGet(_oName);
+            if (!ctr) {
+                console.error(`The counter (${_oName}) was NOT found!`);
+                return false;
+            }
+            let xOffset = _oName.replace('counter','')[0] === 'b' ? -20: 0;
+
+            let maxDrop = 60;
+            let counterYDrop = maxDrop - (vars.player.counters.white.completed.length * 10)
+            scene.tweens.add({
+                targets: ctr,
+                x: ctr.x+xOffset, y: ctr.y+counterYDrop,
+                duration: 500
+            })
+        },
+
         counterToNewPosition: (_object)=> {
             let startPosition = _object.getData('moveFrom');
             let targetPosition = _object.getData('moveTo');
+            let objectColour = _object.name.replace('counter','')[0];
             let gV = vars.game;
+            let pV = vars.player;
             if (!startPosition.includes('S') && gV.startingCounter!='') { // if this isnt a start counter, but there is one visible
                 // we need to hide that start counter
                 let counterName = gV.startingCounter;
@@ -42,10 +78,10 @@ var vars = {
                 if (counterName.replace('counter','')[0]==='w') {
                     counterIcon = '🞉';
                     if (vars.DEBUG) { console.log(`${counterIcon} Pushing WHITE counter back onto start position`); }
-                    pC = vars.player.counters.white;
+                    pC = pV.counters.white;
                 } else {
                     if (vars.DEBUG) { console.log(`${counterIcon} Pushing BLACK counter back onto start position`); }
-                    pC = vars.player.counters.black;
+                    pC = pV.counters.black;
                 }
                 pC.atStart.push(counterName);
             } else if (gV.startingCounter!=='') {
@@ -53,8 +89,9 @@ var vars = {
             }
             if (vars.DEBUG) { console.log(` 🞅 🡺 Moving counter with name ${_object.name} to ${targetPosition}`); }
             vars.animate.counterBounceTweensStop();
-            let counterMoves = vars.game.generateBoardPath(startPosition, targetPosition);
-            if (vars.DEBUG) { console.log(counterMoves);}
+            let counterPath = objectColour === 'w' ? [...consts.playerPaths.white] : [...consts.playerPaths.black];
+            let counterMoves = gV.generateBoardPath(startPosition, targetPosition, counterPath);
+            vars.DEBUG ? console.log(counterMoves) : null;
             let dur = consts.durations.counterMove;
             let total = counterMoves.length-1;
 
@@ -64,6 +101,9 @@ var vars = {
                 let oldPos = vars.boardPositions[startPosition];
                 oldPos.takenByPlayer=0; oldPos.counterName='';
             }
+
+            // increase the counters depth so it moves above the other counters
+            _object.setDepth(_object.depth+1);
             // now start moving the counter
             let onComplete = vars.animate.counterUpdateFrame;
             counterMoves.forEach( (_m, _i)=> {
@@ -77,7 +117,35 @@ var vars = {
                     onComplete: onComplete, onCompleteParams: [lastCounter]
                 })
             })
+        },
 
+        counterToStart: (_cObject)=> {
+            //let x = _cObject.getData('x'); let y = _cObject.getData('y');
+            let path = vars.game.generateBackToStartPath(_cObject);
+
+            if (!path) {
+                 console.error('Unable to generate path for this counter!');
+                 console.log(`Name of counter ${_cObject.name}`);
+                 console.log(_cObject);
+                 return false;
+            }
+
+            // increase the counters depth so it moves above the other counters
+            _cObject.setDepth(_cObject.depth+1);
+            let bPs = vars.boardPositions;
+            path.forEach( (_dest, _i)=> {
+                let x = bPs[_dest].x; let y = bPs[_dest].y;
+
+                let oC = _i===path.length-1 ? vars.animate.counterFadeOut: null;
+                let dur = 125;
+                scene.tweens.add({
+                    targets: _cObject,
+                    x: x, y: y,
+                    duration: dur, // maximim duration will be 7 (attack squares when starting at a8) + 4 (starting sqaures) + 1 (when reaching the start sqaure) * 125 = 1.5s
+                    delay: _i*dur,
+                    onComplete: oC
+                })
+            })
         },
 
         counterUpdateFrame: (_t, _o, _lastCounter)=> {
@@ -91,27 +159,40 @@ var vars = {
             // set this counters position using "set data on _o"
 
             if (lastMove===true) {
+                let pV = vars.player;
                 // WE NEED TO UPDATE THE COUNTER OBJECTS DATA
                 let x = object.x; let y = object.y;
                 object.setData({ boardPosition: bPos, moveFrom: '', moveTo: '', x: x, y: y });
+                // IF TAKING IS NOT EMPTY, TAKE THE PIECE. WE NEED TO DO THIS BEFORE UPDATING THE BOARD FOR THE ATTACKING PLAYER
+                let taking = object.getData('taking');
+                if (taking!=='') { vars.game.takePiece(taking); }
+
+                // decrease the counters depth so it moves above the other counters
+                object.setDepth(object.depth-1);
+
                 // UPDATE THE BOARD POSITIONS
                 let bP = vars.boardPositions[bPos];
-                bP.takenByPlayer = vars.player.current;
+                bP.takenByPlayer = pV.current;
                 let win = false;
                 if (bPos.includes('E')) {
                     bP.counterName.push(cName);
+                    vars.animate.counterToEndPosition(cName);
                     // check for win
-                    let win = vars.game.checkForWin(bP);
+                    win = vars.game.checkForWin(bP.counterName);
                 } else {
                     bP.counterName=cName;
                 }
 
                 if (win===true) {
                     // show win message etc TODO
-                    vars.UI.showMessage(`PLAYER ${vars.player.current} WINS!`, -1);
+                    pV.win = true;
+                    pV.wins[pV.current]++;
+                    vars.UI.showMessage(`PLAYER ${pV.current} WINS!`, -1);
                     return false;
                 }
 
+
+                // NO WIN STATE FOUND
 
                 // TEST IF THE PLAYER LANDED ON A "FREE SHOT" SQUARE
                 let pCol = cName.replace('counter','')[0];
@@ -164,7 +245,7 @@ var vars = {
         },
 
         initBarrier: ()=> {
-            let depth = consts.depths.board+1;
+            let depth = consts.depths.shield;
             barrier = 'newBarrier';
             let a = scene.add.image(1047, 251, 'shielded').setName('shield_1').setDepth(depth).setAlpha(0.05).setTint(0x00ff00).setVisible(false);
             let b = scene.add.image(1047, 251, 'shielded').setName('shield_2').setDepth(depth).setAlpha(1).setTint(0x008000).setVisible(false);
@@ -274,9 +355,11 @@ var vars = {
 
             // now animate the popup
             let yoyo = true; let hold = _dur;
+            let oC = null;
             if (_dur===-1) { // this pop up doesnt disappear until its clicked
                 yoyo = false;
                 hold = null;
+                bg.setInteractive();
             }
             let duration = consts.durations.popup;
             // MESSAGE TEXT
@@ -311,9 +394,11 @@ var vars = {
 
     audio: {
         dice: [],
+        volume: 0.1,
 
         init: function() {
-            scene.sound.volume=0.1;
+            console.log('  ..initialising audio and vars');
+            scene.sound.volume=vars.audio.volume;
         },
 
         playSound: function(_key) {
@@ -329,6 +414,7 @@ var vars = {
         mainCam: null,
 
         init: function() {
+            console.log('  ..initialising cameras and vars');
             vars.camera.mainCam = scene.cameras.main;
         },
 
@@ -341,7 +427,7 @@ var vars = {
         startingCounter: '',
 
         init: ()=>{
-
+            console.log('  ..initialising game and vars');
         },
 
         checkForWin: (_counterArray)=> {
@@ -350,6 +436,16 @@ var vars = {
                 return false;
             }
             return _counterArray.length === 6 ? true : false;
+        },
+
+        diceEnable: ()=> {
+            // move the counter to the position on the board
+
+            // re-enable the dice
+            let diceArray = vars.game.getDiceObjects();
+            vars.input.diceEnable(diceArray, true);
+            // reset all the dice data
+            diceArray.forEach( (d)=> { vars.game.resetDiceData(d); })
         },
 
         diceUpdate: (_tween, _object)=> {
@@ -428,17 +524,40 @@ var vars = {
             }
         },
 
-        generateBoardPath: (_startPosition, _endPosition)=> {
+        generateBackToStartPath: (_object)=> {
+            let startPosition = _object.getData('boardPosition');
+            let col=_object.name.replace('counter','')[0];
+            let colour = col === 'w' ? 'white' : 'black';
+            let endPosition = `${col}S`;
+            vars.DEBUG ? console.log(`Start Position: ${startPosition}, End Position: ${endPosition}`) : null;
+            let path = [...consts.playerPaths[colour]];
+            path = path.reverse();
+
+            let sI = -1; let eI = -1;
+            path.forEach( (_cPos, _i)=> {
+                if (_cPos===startPosition) { sI=_i; }
+                if (_cPos===endPosition) { eI=_i; }
+            })
+
+            if (sI===-1 || eI===-1) {
+                console.error('Unable to generate a path back to start');
+                return false;
+            }
+            vars.DEBUG ? console.log(`Path found from position ${sI} to position ${eI}`) : null;
+            return path.splice(sI+1,eI);
+        },
+
+        generateBoardPath: (_startPosition, _endPosition, path)=> {
             if (_startPosition.length!==2 || _endPosition.length!==2) {
                 console.error(`Start position (${_startPosition}) or end position (${_endPosition}) is invalid`);
                 return false;
             }
 
+            console.log(`Finding path from ${_startPosition} to ${_endPosition}`);
+
             // get the board path for the players colour
             // each board position takes 333ms to traverse
             // as the max roll is 4 this means the total time for movement is 1.333 seconds
-            let colour = _startPosition[0] === 'w' ? 'white' : 'black';
-            let path = consts.playerPaths[colour];
             let bPs = vars.boardPositions;
             let counterPath = [];
             let foundStart = false;
@@ -495,8 +614,8 @@ var vars = {
 
             // if there are still counters to enter the board
             // START POSITION COUNTERS
-            if (pV.counters[cPColour].atStart.length>0) {
-                let counterID = pV.counters[cPColour].atStart.pop();
+            if (vars.player.counters[cPColour].atStart.length>0) {
+                let counterID = vars.player.counters[cPColour].atStart.pop();
                 let moveToPosition = board[points];
                 if (bPs[moveToPosition].takenByPlayer===0) { // CHECK THAT THE MOVE TO POSITION ISNT ALREADY TAKEN BY CURRENT PLAYER
                     validMoves.push([`${cPColour[0]}S`,moveToPosition, null]);
@@ -523,7 +642,9 @@ var vars = {
                     if (currentPlayer!==op && newPos!=='a4') {
                         if (op!==currentPlayer) {
                             validMoves.push([_p, newPos, op]);
+                            // deal with counters that reach the end of the board (as the counter names are in an array for this position) and dont hold a single counter name
                             let taking = bPs[newPos].counterName;
+                            if (Array.isArray(taking)) { taking=''; }
                             // bounce this counter
                             let _o = vars.phaserObject.quickGet(counterID);
                             _o.setData({ moveTo: newPos, moveFrom: _p, taking: taking });
@@ -544,16 +665,6 @@ var vars = {
             }
 
             return validMoves;
-        },
-
-        diceEnable: ()=> {
-            // move the counter to the position on the board
-
-            // re-enable the dice
-            let diceArray = vars.game.getDiceObjects();
-            vars.input.diceEnable(diceArray, true);
-            // reset all the dice data
-            diceArray.forEach( (d)=> { vars.game.resetDiceData(d); })
         },
 
         resetDiceData: (_o)=> {
@@ -577,6 +688,36 @@ var vars = {
 
             // highlight current players pieces that can move
             // this is done in after all dice have been randomised 4 times. Its handled in game.diceUpdate
+        },
+
+        takePiece: (_objectName)=> {
+            console.log(`Taking ${_objectName}`);
+            // we need a few variables here as we are gonna reset most of them
+            let bPs = vars.boardPositions;
+            
+            let takenCounterObject = vars.phaserObject.quickGet(_objectName);
+            if (takenCounterObject===false) {
+                console.error(`Object was NOT found!`);
+                return false;
+            }
+        
+            let colour = _objectName.replace('counter','')[0];
+            // clear the board position
+            let bP = takenCounterObject.getData('boardPosition');
+            bPs[bP].counterName = '';
+            bPs[bP].takenByPlayer = vars.player.getCurrent()[0];
+
+            // reset the data for this object
+            let cStartPos = bPs[`${colour}S`];
+            //let x = cStartPos.x; let y = cStartPos.y;
+            // animate the counter back to its start position
+            vars.animate.counterToStart(takenCounterObject);
+
+            // now we need to push this counter name back onto the at start var
+            let colourFull = colour === 'w' ? 'white' : 'black';
+            vars.player.counters[colourFull].atStart.push(_objectName);
+        
+            
         }
 
     },
@@ -585,6 +726,7 @@ var vars = {
         enabled: true,
 
         init: function() {
+            console.log('  ..initialising input and vars');
             scene.input.on('gameobjectdown', function (pointer, gameObject) {
                 let iV = vars.input;
                 console.log(`Pointer position: x: ${~~(pointer.position.x+0.5)}, y: ${~~(pointer.position.y+0.5)}`);
@@ -595,11 +737,13 @@ var vars = {
 
                 // click functions
                 let oName = gameObject.name;
-                console.log(`🎮 Input: User clicked on ${oName}`);
+                vars.DEBUG ? console.log(`🎮 Input: User clicked on ${oName}`) : null;
                 if (oName.includes('dice')) {
+                    console.clear();
                     // roll dice
                     vars.game.rollDice();
                 } else if (oName==='loadedButton') {
+                    console.clear();
                     gameObject.disableInteractive();
                     // fade out the loaded screen and text
                     // then start the game
@@ -619,6 +763,14 @@ var vars = {
                     }, dur*(4/5))
                 } else if (oName.includes('counter')) {
                     vars.animate.counterToNewPosition(gameObject);
+                } else if (oName = 'popupBG') {
+                    // this is the pop up background
+                    if (vars.player.win===true) {
+                        // restart the game
+                        vars.game.restart();
+                    } else {
+                        console.warn(`Pop up background was clicked. But the win variable is currently false.\nThis will fire when implementing new reasons to keep the background visible.`);
+                    }
                 } else {
                     console.log(`🎮 Game object with name "${gameObject.name}" was clicked. No handler found.`);
                 }
@@ -674,6 +826,7 @@ var vars = {
     particles: {
         init: function() {
             // particles are stored here
+            console.log('  ..initialising particles and vars');
         }
     },
 
@@ -681,6 +834,11 @@ var vars = {
         betterLuck: true, // this changes the chances of the die to roll a one from 25% to 50% as a lot of 0's were being thrown
         current: 1,
         pointsTotal: 0, diceComplete: 0,
+        win: false, // either: false, 1 or 2
+        wins: {
+            1: 0,
+            2: 0,
+        },
 
         counters: {
             white: { atStart: [], completed: [] },
@@ -688,6 +846,7 @@ var vars = {
         },
 
         init: ()=> {
+            console.log('  ..initialising player vars');
             let cV = vars.player.counters;
             cV.white.atStart = Phaser.Utils.Array.NumberArray(1,6,'counterw_');
             cV.black.atStart = Phaser.Utils.Array.NumberArray(1,6,'counterb_');
@@ -738,6 +897,14 @@ var vars = {
             }
         },
 
+        reset: ()=> {
+            let pV = vars.player;
+            pV.current = 1; // this resets the player to 1. It should probably be set to the winning player TODO
+            pV.pointsTotal = 0;
+            pV.diceComplete = 0;
+            pV.win = false;
+        },
+
         rollCountReset: ()=> {
             vars.player.rollCount=0;
         }
@@ -745,37 +912,38 @@ var vars = {
 
     UI: {
         init: ()=> {
-            console.log('Initialising the UI');
+            console.log('  ..initialising the UI');
             let dC = consts.depths;
-            let depth = dC.board;
+            let boardDepth = dC.board;
+            let diceDepth = dC.dice;
+            let counterDepth = dC.counters;
+            let msgDepth = dC.message;
 
             // draw the background (game board)
-            scene.add.image(vars.canvas.cX, vars.canvas.cY, 'sandBG').setInteractive().setName('sandBG').setDepth(depth);
-            scene.add.image(vars.canvas.cX, vars.canvas.cY, 'boardBG').setInteractive().setName('gameBoard').setDepth(depth);
+            scene.add.image(vars.canvas.cX, vars.canvas.cY, 'sandBG').setInteractive().setName('sandBG').setDepth(dC.sand);
+            scene.add.image(vars.canvas.cX, vars.canvas.cY, 'boardBG').setInteractive().setName('gameBoard').setDepth(boardDepth);
 
             // draw the background for the dice area
-            scene.add.image(1350, 550, 'whitePixel').setName('diceBlackBG').setTint(0x0).setAlpha(0.35).setDepth(depth+2).setScale(450,450).setOrigin(0);
-            scene.add.text(1500, 585, 'Player 1').setName('playerText').setFontSize(32).setFontStyle('bold').setFontFamily('Consolas').setAlign('center').setAlpha(0).setDepth(depth+3).setShadow(4,4,'#000',1);
-            scene.add.text(1400, 935, 'Please roll the dice').setName('rollText').setFontSize(32).setFontStyle('bold').setFontFamily('Consolas').setAlign('center').setAlpha(0).setDepth(depth+3).setShadow(4,4,'#000',1).setData('old','');
+            scene.add.image(1350, 550, 'whitePixel').setName('diceBlackBG').setTint(0x0).setAlpha(0.35).setDepth(diceDepth-2).setScale(450,450).setOrigin(0);
+            scene.add.text(1500, 585, 'Player 1').setName('playerText').setFontSize(32).setFontStyle('bold').setFontFamily('Consolas').setAlign('center').setAlpha(0).setDepth(dC.dice).setShadow(4,4,'#000',1);
+            scene.add.text(1400, 935, 'Please roll the dice').setName('rollText').setFontSize(32).setFontStyle('bold').setFontFamily('Consolas').setAlign('center').setAlpha(0).setDepth(dC.dice).setShadow(4,4,'#000',1).setData('old','');
 
             // DICE
             // draw the dice and animate them into position
             let alpha = consts.alphas.ZERO;
             let scale = 0.75;
             let diceScale = 5;
-            let diceDepth = dC.dice;
-            
-            depth = dC.dice-1;
-            let positions = [[1500,700], [1650,700], [1500,840], [1650,840]];
+
+            let positions = consts.dice.positions;
             let dropShadows = []
             let dice = []
             positions.forEach( (_p, _i)=> {
-                dropShadows.push(scene.add.image(_p[0], _p[1], 'dice').setFrame('diceBG').setName(`d${_i+1}_Shadow`).setScale(scale).setAlpha(alpha).setDepth(depth));
+                dropShadows.push(scene.add.image(_p[0], _p[1], 'dice').setFrame('diceBG').setName(`d${_i+1}_Shadow`).setScale(scale).setAlpha(alpha).setDepth(diceDepth-1));
                 dice.push(scene.add.image(_p[0], _p[1], 'dice').setName(`dice${_i+1}`).setScale(diceScale).setAlpha(alpha).setInteractive().setDepth(diceDepth).setData({ points: 1, rollNumber: 0 }));
             })
 
             // now the counter for after the dice has been rolled
-            scene.add.text(1575, 775, '4').setColor('red').setName('pointsCount').setFontSize(96).setScale(3).setFontStyle('bold').setFontFamily('Consolas').setAlign('center').setAlpha(0).setDepth(depth+1).setOrigin(0.5).setShadow(2,2,'#000',3);
+            scene.add.text(1575, 775, '4').setColor('red').setName('pointsCount').setFontSize(96).setScale(3).setFontStyle('bold').setFontFamily('Consolas').setAlign('center').setAlpha(0).setDepth(diceDepth+1).setOrigin(0.5).setShadow(2,2,'#000',3);
 
             // animate the shadows
             // drop the dice into place
@@ -788,15 +956,14 @@ var vars = {
             let startPosWhite = [ bPs.wS.x, bPs.wS.y];
             let startPosBlack = [ bPs.bS.x, bPs.bS.y];
             [1,2,3,4,5,6].forEach( (_c)=> {
-                let whiteCounter = scene.add.image(startPosWhite[0], startPosWhite[1],'counters').setFrame('wS').setDepth(depth).setAlpha(0).setName(`counterw_${_c}`).setData({moveFrom: '', moveTo: '', x: startPosWhite[0], y: startPosWhite[1], boardPosition: '', taking: '' }).setInteractive();
-                let blackCounter = scene.add.image(startPosBlack[0], startPosBlack[1],'counters').setFrame('bS').setDepth(depth).setAlpha(0).setName(`counterb_${_c}`).setData({moveFrom: '', moveTo: '', x: startPosBlack[0], y: startPosBlack[1], boardPosition: '', taking: '' }).setInteractive();
+                let whiteCounter = scene.add.image(startPosWhite[0], startPosWhite[1],'counters').setFrame('wS').setDepth(counterDepth).setAlpha(0).setName(`counterw_${_c}`).setData({moveFrom: '', moveTo: '', x: startPosWhite[0], y: startPosWhite[1], boardPosition: '', taking: '' }).setInteractive();
+                let blackCounter = scene.add.image(startPosBlack[0], startPosBlack[1],'counters').setFrame('bS').setDepth(counterDepth).setAlpha(0).setName(`counterb_${_c}`).setData({moveFrom: '', moveTo: '', x: startPosBlack[0], y: startPosBlack[1], boardPosition: '', taking: '' }).setInteractive();
                 scene.groups.whiteCounters.add(whiteCounter);
                 scene.groups.blackCounters.add(blackCounter);
             })
             // END OF COUNTERS
 
             // pop up bg
-            let msgDepth = consts.depths.message;
             scene.add.image(vars.canvas.cX, vars.canvas.cY, 'whitePixel').setName('popupBG').setTint('#000').setScale(vars.canvas.width, vars.canvas.height).setDepth(msgDepth-1).setAlpha(0);
             scene.add.text(vars.canvas.cX, vars.canvas.cY, '...').setName('popupText').setColor('#ff0').setFontSize(96).setFontStyle('bold').setFontFamily('Consolas').setAlign('center').setAlpha(0).setDepth(msgDepth).setShadow(8,8,'#000',2);
 
@@ -809,11 +976,11 @@ var vars = {
 
         initLogo: ()=> {
             scene.textures.once('addtexture', function () {
-                let logo = scene.add.image(vars.canvas.width-10, vars.canvas.height-10, 'logo').setDepth(254).setOrigin(1,1).setScale(0.66).setAlpha(0);
+                let logo = scene.add.image(vars.canvas.width-10, vars.canvas.height-10, 'logo').setDepth(consts.depths.debug).setOrigin(1,1).setScale(0.66).setAlpha(0);
                 scene.tweens.add( {
                     targets: logo,
-                    alpha: 0.15,
-                    duration: 10000
+                    alpha: 0.12,
+                    duration: consts.durations.oneMinute
                 })
             }, this);
             scene.textures.addBase64('logo', 'data:image/png;base64,' + vars.logo);
