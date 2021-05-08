@@ -140,7 +140,10 @@ function create() {
 
 
     if (vars.DEBUG && window.location.host==='offero04.io') {
-        scene.add.text(vars.canvas.width, 0, `DEBUG ON. Game version: ${vars.version}\nInitialisation took ${totalTime}ms`).setAlign('right').setName('debugText').setOrigin(1,0).setColor('#0').setDepth(consts.depths.debug);
+        let dbgBG = scene.add.image(vars.canvas.width, 0, 'whitePixel').setName('dbgBG').setDepth(consts.depths.debug-1).setScale(300,180).setAlpha(0.33).setOrigin(1,0);
+        let dbgTxt = scene.add.text(vars.canvas.width, 0, `DEBUG ON. Game version: ${vars.version}\nInitialisation took ${totalTime}ms`).setAlign('right').setName('debugText').setOrigin(1,0).setColor('#0').setDepth(consts.depths.debug);
+        let dbgForce = scene.add.text(vars.canvas.width, 150, `Force: Disabled`).setAlign('right').setName('dbgTextForce').setOrigin(1,0).setColor('#0').setFontSize(24).setFontStyle('bold').setDepth(consts.depths.debug);
+        scene.groups.debug.addMultiple([dbgTxt, dbgForce, dbgBG]);
         vars.debugFN.showDebugBoard();
         quickGet = vars.phaserObject.quickGet;
     } else {

@@ -91,8 +91,10 @@ vars.files = {
             scene.load.audio('sandHit', 'audio/sandHit.ogg');
             scene.load.audio('diceRoll1', 'audio/dice1.ogg');
             scene.load.audio('diceRoll2', 'audio/dice2.ogg');
+            scene.load.audio('diceShakeRoll', 'audio/shakeRollDice.ogg');
 
             vars.audio.dice.push('diceRoll1','diceRoll2');
+
         }
     },
 

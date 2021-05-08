@@ -1,7 +1,7 @@
 var vars = {
     DEBUG: false,
 
-    version: 0.6,
+    version: 0.64,
 
     // APP
     animate: {
@@ -498,13 +498,11 @@ var vars = {
         },
 
         diceEnable: ()=> {
-            // move the counter to the position on the board
-
             // re-enable the dice
             let diceArray = vars.game.getDiceObjects();
             vars.input.diceEnable(diceArray, true);
             // reset all the dice data
-            console.groupCollapsed('Reseting all dice')
+            console.groupCollapsed('🎲 Reseting all dice')
             diceArray.forEach( (d)=> { vars.game.resetDiceData(d); })
             console.groupEnd();
         },
@@ -542,7 +540,7 @@ var vars = {
                     vars.animate.randomiseDice(_object);
                 } else if (rollNumber===maxRolls) {
                     console.log(`  ${_object.name} has rolled ${maxRolls} times`);
-                    
+
                     // this die has rolled 4 full times, add it to the total
                     let points = _object.getData('points');
                     vars.player.pointsTotal+=points;
@@ -551,6 +549,14 @@ var vars = {
                     if (vars.player.diceComplete===4) { // all dice have been counted
                         console.groupEnd();
                         // show the counter
+                        if (vars.force!==undefined) {
+                            if (vars.force!==-1) {
+                                console.log(`🏋🎲 %cForcing Dice Roll to ${vars.force}`, 'color: green; font-weight: bold; font-size: 14px;');
+                                vars.player.pointsTotal=vars.force;
+                            } else {
+                                console.log(`🏋🎲 %cForce is ON but force value is not set.`,'color: red; background-color: white; font-size: 14px;');
+                            }
+                        }
                         vars.UI.showPointsCount();
                         let validMoves = vars.game.getValidMoves();
 
@@ -796,7 +802,8 @@ var vars = {
         enabled: true,
 
         init: function() {
-            console.log('  ..initialising input and vars');
+            vars.DEBUG ? console.log('  ..initialising input and vars') : null;
+            vars.DEBUG ? vars.input.enableCombos() : null;
             scene.input.on('gameobjectdown', function (pointer, gameObject) {
                 let iV = vars.input;
                 console.log(`Pointer position: x: ${~~(pointer.position.x+0.5)}, y: ${~~(pointer.position.y+0.5)}`);
@@ -883,6 +890,28 @@ var vars = {
                 vars.DEBUG ? console.log('🛑 🎮 Disabling input on all dice.') : null;
                 _dice.forEach( (_d)=> { _d.disableInteractive(); })
             }
+        },
+
+        enableCombos: ()=> {
+            let sIK = scene.input.keyboard;
+            sIK.createCombo('force4',   { resetOnMatch: true });
+            sIK.createCombo('force3',   { resetOnMatch: true });
+            sIK.createCombo('force2',   { resetOnMatch: true });
+            sIK.createCombo('force1',   { resetOnMatch: true });
+            sIK.createCombo('forceOff', { resetOnMatch: true });
+
+            sIK.on('keycombomatch', function (event) {
+                let comboName = '';
+                event.keyCodes.forEach( (cC)=> {
+                    comboName += String.fromCharCode(cC);
+                })
+                if (comboName.includes('FORCE')) {
+                    let force = comboName.replace('FORCE', '');
+                    vars.force = force === 'OFF' ?  -1 : ~~(force);
+                    console.log(`Force has been set to ${force}`);
+                    quickGet('dbgTextForce').setText(`Force: ${force}`);
+                }
+            })
         },
 
         setEnabled: (_opt=true)=> {
