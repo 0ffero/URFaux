@@ -32,6 +32,7 @@ vars.debugFN = {
     },
 
     bounceTestCounters: ()=> {
+        console.warn('Bounce Test has been disabled'); return false;
         [1,2,3,4,5,6,7,8].forEach( (_cN)=> {
             let a = vars.phaserObject.quickGet(`counterw_${_cN}`);
             let b = vars.phaserObject.quickGet(`counterb_${_cN}`);
@@ -65,11 +66,12 @@ vars.debugFN = {
         let xStart = x = 1660;
         let y = 60;
         let spacing = 35;
+        let debugDepth = consts.depths.debug;
         console.groupCollapsed('Creating DEBUG Board');
-        let start = {
+        /* let start = {
             white: [ vars.boardPositions.wS.x,vars.boardPositions.wS.y ],
             black: [ vars.boardPositions.bS.x,vars.boardPositions.bS.y ]
-        }
+        } */
         positions.forEach( (_bP)=> {
             let colour = _bP[0]; let pos = ~~(_bP[1]);
             let reds = consts.colours.hex.reds;
@@ -81,9 +83,15 @@ vars.debugFN = {
             console.log(`Adding position ${_bP} at ${x}, ${y}. Tint is ${tintString}`);
             let posInt = _bP[1];
             if (posInt==6 && _bP[0]!=='a') { x+=spacing*2; }
-            let dbp = scene.add.image(x,y,'debugBoardPieces').setDepth(consts.depths.debug).setFrame(0).setName(`dbgBP_${_bP}`).setAlpha(0.8).setTint(tint).setData({ originalColour: tint });
+            let dbp = scene.add.image(x,y,'debugBoardPieces').setDepth(debugDepth).setFrame(0).setName(`dbgBP_${_bP}`).setAlpha(0.8).setTint(tint).setData({ originalColour: tint });
             scene.groups.debug.add(dbp);
             x+=spacing;
+            if (_bP==='w1' || _bP==='b1') { // show the atStart counter
+                let frameColour = _bP[0];
+                let tint = frameColour === 'b' ? 'black' : 'white';
+                scene.add.text(x,y,'6').setName(`dbg${frameColour}AtStart`).setDepth(debugDepth).setOrigin(0.5).setColor(tint).setFontSize(32).setFontFamily('Consolas');
+                scene.add.text(x+spacing,y,'0').setName(`dbg${frameColour}AtEnd`).setDepth(debugDepth).setOrigin(0.5).setColor(tint).setFontSize(32).setFontFamily('Consolas');
+            }
             if (_bP==='w5') { x=xStart; y+=spacing; }
             if (_bP==='a8') { x=xStart; y+=spacing; }
         })
@@ -106,8 +114,6 @@ vars.debugFN = {
     },
 
     updateDebugBoard: ()=> {
-        // first, remove all current tints
-        // now update the board
         let bPs = vars.boardPositions;
         if (vars.DEBUG) { console.groupCollapsed('Updating Debug Board'); }
         for (bP in bPs) {
@@ -119,6 +125,11 @@ vars.debugFN = {
                 dbg.setFrame(frame).setTint(tint);
             }
         }
+
+        vars.phaserObject.quickGet('dbgwAtStart').setText(vars.player.counters.white.atStart.length);
+        vars.phaserObject.quickGet('dbgbAtStart').setText(vars.player.counters.black.atStart.length);
+        vars.phaserObject.quickGet('dbgwAtEnd').setText(vars.boardPositions.wE.counterName.length);
+        vars.phaserObject.quickGet('dbgbAtEnd').setText(vars.boardPositions.bE.counterName.length);
         if (vars.DEBUG) { console.groupEnd(); }
     }
 }

@@ -305,7 +305,8 @@ var vars = {
             });
 
             setTimeout( ()=> {
-                vars.animate.showBarrier(false);
+                // sometimes, if debug is on, a4 will be taken (basically used for testing), otherwise hide the shield
+                if (vars.boardPositions.a4.takenByPlayer===0) {vars.animate.showBarrier(false, true); }
             }, 750)
 
             //let b = scene.add.image(1047, 251, 'shielded').setName('shield_2').setDepth(depth).setAlpha(1).setTint(0x008000).setVisible(false);
@@ -395,9 +396,9 @@ var vars = {
             }
         },
 
-        showBarrier: (_show=true)=> { // this deals with showing and hiding the barrier
+        showBarrier: (_show=true, _init=false)=> { // this deals with showing and hiding the barrier
             // when a players counter lands on "a4" a barrier shows. when they move away from it the barrier hides
-            vars.DEBUG ? console.log(`Player has landed on a4. Showing barrier.`) : null;
+            vars.DEBUG ? console.log(`${_init ? '' : 'Player has landed on a4.' }${_show ? 'Showing' : 'Hiding' } barrier.`) : null;
             vars.phaserObject.quickGet('shield_1').setVisible(_show);
             _show ? vars.animate.shieldTween.resume() : vars.animate.shieldTween.pause();
             //vars.phaserObject.quickGet('shield_2').setVisible(_show);

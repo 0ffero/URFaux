@@ -75,7 +75,7 @@ vars.containers = {
 
 vars.files = {
     fileSizes: 0,
-    
+
     init: ()=> {
         let fV = vars.files;
         fV.audio.init();
@@ -109,6 +109,10 @@ vars.files = {
 
             if (vars.DEBUG) {
                 scene.load.spritesheet('debugBoardPieces', 'images/debugBoardPieces-ext.png', { frameWidth: 30, frameHeight: 30, spacing: 2, margin: 1 })
+            } else {
+                // if debug isnt enabled, we have to add the debug board image size to the loaded variable
+                let fileSize = vars.files.fileSizes.files['debugBoardPieces-ext.png'];
+                vars.files.fileSizes.details.loadedSize += fileSize;
             }
         }
     }
