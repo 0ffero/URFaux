@@ -1,7 +1,7 @@
 var vars = {
     DEBUG: false,
 
-    version: 0.64,
+    version: 0.74,
 
     // APP
     animate: {
@@ -196,6 +196,7 @@ var vars = {
                 let win = false;
                 if (bPos.includes('E')) {
                     bP.counterName.push(cName);
+                    bP.takenByPlayer=0; // the end sqaure can hold multiple counters
                     vars.animate.counterToEndPosition(cName);
                     // check for win
                     win = vars.game.checkForWin(bP.counterName);
@@ -688,6 +689,8 @@ var vars = {
                     validMoves.push([`${cPColour[0]}S`,moveToPosition, null]);
                     vars.animate.startingCounter(counterID, moveToPosition);
                     vars.game.startingCounter = counterID;
+                } else {
+                    vars.player.counters[cPColour].atStart.push(counterID); // fixes the disappearing counter bug
                 }
             }
 
@@ -708,7 +711,7 @@ var vars = {
                     // check board position += points for counter
                     let newPos = board[_i+points];
                     let ownedBy = bPs[newPos].takenByPlayer; // this can be 0 (no one) 1 (player 1/white) or 2 (player 2/black)
-                    if (currentPlayer!==ownedBy) { // this position has been taken by the other player
+                    if (currentPlayer!==ownedBy || newPos[1]==='E') { // this position has been taken by the other player
                         let _o = vars.phaserObject.quickGet(counterID);
                         if (newPos!=='a4') { // if it isnt a4, then the piece can be taken, hence, valid move.
                             validMoves.push([_p, newPos, ownedBy]);
@@ -721,6 +724,7 @@ var vars = {
                         }
                         if (newPos==='a4' && ownedBy===0) { // if the new position is a4 and it isnt taken by a player
                             _o.setData({ moveTo: newPos, moveFrom: _p, taking: '' });
+                            validMoves.push([_p, newPos, 0]);
                             // bounce this counter
                             vars.animate.movableCounterBounce(_o);
                         }
@@ -1081,7 +1085,7 @@ var vars = {
                     duration: consts.durations.oneMinute
                 })
             }, this);
-            scene.textures.addBase64('logo', 'data:image/png;base64,' + vars.logo);
+            scene.textures.addBase64('logo', 'data:image/png;base64,' + vars.game.logo);
         },
 
         playerUpdate: (_p)=> {
