@@ -88,13 +88,21 @@ vars.files = {
 
     audio: {
         init: ()=> {
-            scene.load.audio('sandHit', 'audio/sandHit.ogg');
-            scene.load.audio('diceRoll1', 'audio/dice1.ogg');
-            scene.load.audio('diceRoll2', 'audio/dice2.ogg');
-            scene.load.audio('diceShakeRoll', 'audio/shakeRollDice.ogg');
+            let o = '.ogg';
+            let aV = vars.audio;
 
-            vars.audio.dice.push('diceRoll1','diceRoll2');
+            // load the dice audio
+            let aD = 'audio/dice/';
+            scene.load.audio('sandHit', `${aD}sandHit${o}`);
+            scene.load.audio('diceRoll1', `${aD}dice1${o}`);
+            scene.load.audio('diceRoll2', `${aD}dice2${o}`);
+            scene.load.audio('diceShakeRoll', `${aD}shakeRollDice${o}`);
+            aV.dice.push('diceRoll1','diceRoll2');
 
+            // load the counter slide audio files
+            aV.countersMove = Phaser.Utils.Array.NumberArray(1,8,'counterSlide');
+            aD = 'audio/counterSlides/';
+            aV.countersMove.forEach( (_a)=> { scene.load.audio(_a, `${aD}${_a}${o}`); })
         }
     },
 

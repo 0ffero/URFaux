@@ -61,52 +61,29 @@ var startTime = new Date();
 function preload() {
     scene = this;
 
+    // set up the loading progress bar
     let dDepth = consts.depths.debug;
-    var progressBar = this.add.graphics().setDepth(dDepth);
-    var progressBox = this.add.graphics().setDepth(dDepth-1);
-    progressBox.fillStyle(0x222222, 0.8);
-    progressBox.fillRect(vars.canvas.cX-320, vars.canvas.cY*1.75, 640, 50);
+    let gPV = vars.graphics.progress;
+    let bar = gPV.bar;
+    bar.object = scene.add.graphics().setDepth(dDepth);
+    let box = gPV.box;
+    box.object = scene.add.graphics().setDepth(dDepth-1);
+    box.object.fillStyle(0x222222, 0.8);
+    box.object.fillRect(vars.canvas.cX-box.width/2, vars.canvas.height*0.85, box.width, box.height);
 
-    scene.load.on('load', (_fileData)=> {
-        let fSName = _fileData.src.replace(/assets\/\w+\//,'')
-        let fFV = vars.files.fileSizes;
-        let fS = fFV.files;
-        let before = fFV.details.loadedSize;
-        let tot = fFV.details.totalSize;
-        if (fS[fSName]!==undefined) {
-            // add this amount to the loaded size variable
-            fFV.details.loadedSize+=fS[fSName];
-            // convert it to a percentage
-            let loadedPercent = Phaser.Math.Clamp(~~(fFV.details.loadedSize/tot*100)/100, 0.01, 1);
-            vars.DEBUG ? console.log(`${~~(loadedPercent*100)}% - Loaded ${fSName}. (Adding: ${fS[fSName]/1000}KB to ${before/1000}KB = ${fFV.details.loadedSize/1000}KB of ${tot/1000}KB)`): null;
-            progressBar.clear();
-            progressBar.fillStyle(0xffffff, 1);
-            progressBar.fillRect(vars.canvas.cX-310, vars.canvas.cY*1.75+10, 620 * loadedPercent, 30);
-            if (loadedPercent===1) {
-                scene.tweens.add({
-                    targets: [progressBar,progressBox],
-                    alpha: 0,
-                    delay: 500,
-                    duration: 500
-                })
-            }
-        } else {
-            console.log(`Loaded ${fS[fSName]}, but it was NOT found in the file list...`);
-        }
-    })
+    // when a file loads, update the progress bar
+    scene.load.on('load', (_fileData)=> { vars.animate.loadingBarProgressUpdate(_fileData); })
+
+    // add the loading screen and fade it in
     let depth = consts.depths.loading;
     let loadingBG = scene.add.image(vars.canvas.cX,-500,'loadingBG').setOrigin(0.5,0).setName('loadingBG').setDepth(depth);
-    scene.tweens.add({
-        targets: loadingBG,
-        y: 0,
-        duration: 1500,
-        ease: 'Quad'
-    })
+    scene.tweens.add({ targets: loadingBG, y: 0, duration: 1500, ease: 'Quad' })
     scene.add.image(vars.canvas.cX, vars.canvas.cY, 'loadingText').setName('loadingText').setDepth(depth+1);
 
-    // start loading all the assets and intiialise localStorage
+    // start loading all the assets
     scene.load.setPath('assets');
     vars.init(1);
+    console.groupCollapsed('Loading Assets');
 }
 
 
@@ -119,6 +96,7 @@ function preload() {
 █████ █   █ █████ █   █   █   █████ 
 */
 function create() {
+    console.groupEnd();
     let maxTime = 2000;
     // INITIALISE ALL THE THINGS
     vars.init(2);

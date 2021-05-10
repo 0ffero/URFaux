@@ -1,7 +1,9 @@
 var vars = {
     DEBUG: false,
 
-    version: 0.74,
+    version: 0.76,
+
+    clamp: Phaser.Math.Clamp,
 
     // APP
     animate: {
@@ -132,6 +134,9 @@ var vars = {
                     targets: _object,
                     x: x, y: y,
                     duration: dur, delay: _i*dur,
+                    onStart: ()=> {
+                        vars.audio.playSound(shuffle(vars.audio.countersMove)[0]);
+                    },
                     onComplete: onComplete, onCompleteParams: [lastCounter]
                 })
             })
@@ -319,6 +324,50 @@ var vars = {
             vars.DEBUG ? console.log(`Barrier for square a4 has been initialised`) : null;
         },
 
+        loadingBarProgressUpdate: (_fileData)=> {
+            let fSName = _fileData.src.replace(/assets(\/\w+){1,2}\//,'');
+            let fFV = vars.files.fileSizes;
+            let fS = fFV.files;
+            let before = fFV.details.loadedSize;
+            let tot = fFV.details.totalSize;
+            if (fS[fSName]!==undefined) {
+                let bar = vars.graphics.progress.bar;
+                // add this amount to the loaded size variable
+                fFV.details.loadedSize+=fS[fSName];
+                // convert it to a percentage
+                let loadedPercent = Phaser.Math.Clamp(~~(fFV.details.loadedSize/tot*100)/100, 0.01, 1);
+                let kb = false;
+                let logText = kb ? `${~~(loadedPercent*100).toLocaleString()}% - Loaded ${fSName}. (Adding: ${(fS[fSName]/1000).toLocaleString()}KB to ${(before/1000).toLocaleString()}KB = ${(fFV.details.loadedSize/1000).toLocaleString()}KB of ${(tot/1000).toLocaleString()}KB)` : `${~~(loadedPercent*100)}% - Loaded ${fSName}. (Adding: ${(fS[fSName]).toLocaleString()} to ${before.toLocaleString()} = ${fFV.details.loadedSize.toLocaleString()} of ${tot.toLocaleString()})`;
+                // console loading bar
+                let led = '🞕'; let ling ='🞔';
+                loadingBarVar = vars.clamp(loadedPercent,0.1,1)*10;
+                let lText='';
+                for (let lB=1; lB<11; lB++) {
+                    lText += loadingBarVar < lB ? ling : led;
+                }
+                vars.DEBUG ? console.log(`${lText} ${logText}`) : null;
+                // set the file to laoded
+                fS[fSName] = 'Loaded';
+                // refresh the loading bar graphic
+                bar.object.clear();
+                bar.object.fillStyle(0xffffff, 1);
+                bar.object.fillRect(vars.canvas.cX-bar.width/2, vars.canvas.height*0.85+10, bar.width * loadedPercent, bar.height);
+                if (loadedPercent===1) {
+                    // hide the progress bar
+                    vars.DEBUG ? console.log(`🙈 🝙 Hiding the progress bar`) : null;
+                    let box = vars.graphics.progress.box.object;
+                    scene.tweens.add({
+                        targets: [bar.object, box],
+                        alpha: 0,
+                        delay: 500, duration: 500
+                    })
+                }
+            } else {
+                console.warn(`${fSName}, but it was NOT found in the file list...`);
+                console.warn(_fileData);
+            }
+        },
+
         loadingImageSwitch: ()=> {
             let duration = 1000;
             if (vars.DEBUG) { duration = 0; }
@@ -451,11 +500,15 @@ var vars = {
 
     audio: {
         dice: [],
+        countersMove: [],
         volume: 0.1,
+        streams: [],
 
         init: function() {
             console.log('  ..initialising audio and vars');
             scene.sound.volume=vars.audio.volume;
+            let aV = vars.audio;
+            aV.streams = Phaser.Utils.Array.NumberArray(0,9,'busymarketplaceFIFO');
         },
 
         playSound: function(_key) {
@@ -466,6 +519,11 @@ var vars = {
         rollDice: ()=> {
             vars.DEBUG ? console.log(`🎵 🎲 Selecing random dice roll audio`) : null;
             vars.audio.playSound(shuffle(vars.audio.dice)[0]);
+        },
+
+        stream: ()=> {
+            // get random stream and load it
+
         }
     },
 
@@ -753,6 +811,10 @@ var vars = {
             _newGame===false ? null : _o.setFrame('dice1');
         },
 
+        restart: ()=> {
+            console.log(`Restart requested...`);
+        },
+
         rollDice: ()=> {
             vars.DEBUG ? console.log(`Roll Dice called.`) : null;
             // disable input - this needs re-written to simply disable all dice
@@ -760,7 +822,8 @@ var vars = {
             // change the roll text
             vars.UI.rollTextSwitch();
             // play dice roll sound
-            vars.audio.rollDice();
+            vars.audio.playSound('diceShakeRoll');
+            setTimeout(()=> { vars.audio.rollDice();}, consts.durations.diceEndRoll);
 
             // animate the 4 dice
             let diceArray = vars.game.getDiceObjects();
@@ -800,6 +863,21 @@ var vars = {
             vars.player.counters[colourFull].atStart.push(_objectName);
         }
 
+    },
+
+    graphics: {
+        progress: {
+            bar: {
+                object: null,
+                width: 620,
+                height: 30
+            },
+            box: {
+                object: null,
+                width: 640,
+                height: 50
+            }
+        }
     },
 
     input: {

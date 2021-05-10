@@ -36,6 +36,7 @@ const consts = {
 
     durations: {
         counterMove: 333,
+        diceEndRoll: 2000,
         popup: 500,
         oneMinute: 60000
     },
