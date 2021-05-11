@@ -91,6 +91,9 @@ vars.files = {
             let o = '.ogg';
             let aV = vars.audio;
 
+            // load the menu ok sound
+            scene.load.audio('menuOK', `audio/menuOK${o}`);
+
             // load the dice audio
             let aD = 'audio/dice/';
             scene.load.audio('sandHit', `${aD}sandHit${o}`);
@@ -103,6 +106,12 @@ vars.files = {
             aV.countersMove = Phaser.Utils.Array.NumberArray(1,8,'counterSlide');
             aD = 'audio/counterSlides/';
             aV.countersMove.forEach( (_a)=> { scene.load.audio(_a, `${aD}${_a}${o}`); })
+
+            // voice overs
+            aD = 'audio/voice/';
+            ['player1', 'player2', 'youWin', 'youLose'].forEach( (_v)=> {
+                scene.load.audio(_v, `${aD}${_v}${o}`);
+            });
         }
     },
 

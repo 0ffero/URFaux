@@ -1,7 +1,7 @@
 var vars = {
     DEBUG: false,
 
-    version: 0.76,
+    version: 0.78,
 
     clamp: Phaser.Math.Clamp,
 
@@ -212,8 +212,10 @@ var vars = {
                 if (win===true) {
                     // show win message etc TODO
                     pV.win = true;
-                    pV.wins[pV.current]++;
-                    vars.UI.showMessage(`PLAYER ${pV.current} WINS!`, -1);
+                    let winner = pV.current;
+                    pV.wins[winner]++;
+                    vars.UI.showMessage(`PLAYER ${winner} WINS!`, -1);
+                    vars.audio.playeWinLose(winner);
                     return false;
                 }
 
@@ -503,6 +505,8 @@ var vars = {
         countersMove: [],
         volume: 0.1,
         streams: [],
+        player1_length: 800,
+        player2_length: 1000,
 
         init: function() {
             console.log('  ..initialising audio and vars');
@@ -514,6 +518,25 @@ var vars = {
         playSound: function(_key) {
             vars.DEBUG ? console.log(`🎵 Playing audio with name ${_key}`) : null;
             scene.sound.play(_key);
+        },
+
+        playeWinLose: (_winner)=> {
+            let aV = vars.audio;
+            let other = vars.player.getCurrent()[1];
+            let timeOut = aV[`player${_winner}_length`];
+            let timeOutOther = aV[`player${other}_length`];
+
+            vars.audio.playSound(`player${_winner}`);
+            setTimeout( ()=> {
+                vars.audio.playSound('youWin');
+
+                setTimeout( ()=> {
+                    vars.audio.playSound(`player${other}`)
+                    setTimeout( ()=> {
+                        vars.audio.playSound('youLose')
+                    }, timeOutOther)
+                }, 800);
+            }, timeOut);
         },
 
         rollDice: ()=> {
@@ -916,6 +939,9 @@ var vars = {
                         duration: dur,
                         onComplete: vars.phaserObject.destroy
                     })
+
+                    // play menu ok sound
+                    vars.audio.playSound('menuOK');
 
                     setTimeout( ()=> {
                         vars.init(3);
