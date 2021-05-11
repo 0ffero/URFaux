@@ -75,6 +75,7 @@ vars.containers = {
 
 vars.files = {
     fileSizes: 0,
+    loaded: 0,
 
     init: ()=> {
         let fV = vars.files;

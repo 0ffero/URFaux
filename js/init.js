@@ -73,7 +73,6 @@ function preload() {
 
     // when a file loads, update the progress bar
     scene.load.on('load', (_fileData)=> { vars.animate.loadingBarProgressUpdate(_fileData); })
-
     // add the loading screen and fade it in
     let depth = consts.depths.loading;
     let loadingBG = scene.add.image(vars.canvas.cX,-500,'loadingBG').setOrigin(0.5,0).setName('loadingBG').setDepth(depth);

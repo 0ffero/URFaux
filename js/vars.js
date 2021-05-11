@@ -1,7 +1,7 @@
 var vars = {
     DEBUG: false,
 
-    version: 0.78,
+    version: 0.81,
 
     clamp: Phaser.Math.Clamp,
 
@@ -327,6 +327,12 @@ var vars = {
         },
 
         loadingBarProgressUpdate: (_fileData)=> {
+            if (vars.files.loaded>=1) {
+                vars.DEBUG ? console.warn(`All files have already loaded.\nAnd this isnt a stream... this may be a problem for the progress bar`) : null;
+                console.log(_fileData);
+                return false;
+            }
+
             let fSName = _fileData.src.replace(/assets(\/\w+){1,2}\//,'');
             let fFV = vars.files.fileSizes;
             let fS = fFV.files;
@@ -338,6 +344,7 @@ var vars = {
                 fFV.details.loadedSize+=fS[fSName];
                 // convert it to a percentage
                 let loadedPercent = Phaser.Math.Clamp(~~(fFV.details.loadedSize/tot*100)/100, 0.01, 1);
+                vars.files.loaded = loadedPercent;
                 let kb = false;
                 let logText = kb ? `${~~(loadedPercent*100).toLocaleString()}% - Loaded ${fSName}. (Adding: ${(fS[fSName]/1000).toLocaleString()}KB to ${(before/1000).toLocaleString()}KB = ${(fFV.details.loadedSize/1000).toLocaleString()}KB of ${(tot/1000).toLocaleString()}KB)` : `${~~(loadedPercent*100)}% - Loaded ${fSName}. (Adding: ${(fS[fSName]).toLocaleString()} to ${before.toLocaleString()} = ${fFV.details.loadedSize.toLocaleString()} of ${tot.toLocaleString()})`;
                 // console loading bar
@@ -365,6 +372,7 @@ var vars = {
                     })
                 }
             } else {
+                if (vars.DEBUG !== true) { return false; } // DEBUG var is undefined for non devs
                 console.warn(`${fSName}, but it was NOT found in the file list...`);
                 console.warn(_fileData);
             }
@@ -503,21 +511,69 @@ var vars = {
     audio: {
         dice: [],
         countersMove: [],
-        volume: 0.1,
         streams: [],
+        streamPlaying: false,
         player1_length: 800,
         player2_length: 1000,
+        volume: {
+            howler: 0.3,
+            phaser: 0.2,
+
+            multiplier: -1
+        },
+
+        howlerStream: null,
 
         init: function() {
             console.log('  ..initialising audio and vars');
-            scene.sound.volume=vars.audio.volume;
             let aV = vars.audio;
+            scene.sound.volume=aV.volume.phaser;
             aV.streams = Phaser.Utils.Array.NumberArray(0,9,'busymarketplaceFIFO');
+            // as howler deals with streams which are quieter than the sound effects (my bad) we need a multiplier so we can chane the volume
+            aV.volume.multiplier = aV.volume.phaser/aV.volume.howler;
+            console.log(`    🔊 Initialising volume multiplier (set to ${aV.volume.multiplier}).`);
+        },
+
+        loadStream: ()=> {
+            let streamName = shuffle(vars.audio.streams)[0];
+            /*scene.load.audio('ambience', `audio/streams/ambience/${stream}.ogg`, { stream: true})
+            scene.load.start();*/
+            // PHASERS DOCUMENTATION FOR STREAMING OBJECTS IS FUKN TERRIBLE
+            // SO IVE BEEN FORCED TO SET A 10S TIMEOUT TO PLAY AMBIENCE INSTEAD OF WAITING FOR ON(CANPLAY) AS IT NEVER FIRES :s
+
+            // AND HERES HOW EASY IT IS IN HOWLER XD
+            let src = `assets/audio/streams/ambience/${streamName}.ogg`;
+            let volume = vars.audio.volume.howler; // the volume of these streams are really low, so I have to set the volume to 1
+            vars.audio.howlerStream = new Howl({src, volume: volume, autoplay: true});
+            vars.DEBUG ? console.log(`🎵 Playing stream with name ${streamName}`) : null;
+            vars.audio.streamPlaying = true;
         },
 
         playSound: function(_key) {
             vars.DEBUG ? console.log(`🎵 Playing audio with name ${_key}`) : null;
             scene.sound.play(_key);
+        },
+
+        playStream: (_key)=> {
+            // TODO: THIS SHOULD BE CHANGED TO ONREADY OR ONCANPLAY SO WE DONT HAVE TO WAIT SO LONG
+            // ALSO, IF THE FILE FAILS TO LOAD WITHIN 10 SECONDS, IT WILL FAIL TO PLAY!
+            // NOT A BUG BUT STILL NEEDS FIXING BEFORE 1.0
+
+            // SO AFTER A LOT OF FUCKING ABOUT, IT DOESNT APPEAR YOU CAN ON(READY) A SOUND, SO THE TIMEOUT STAYS.
+            // TODO: THIS MEANS THAT IM GOING TO HAVE USE HOWL OR SOMETHING INSTEAD.
+            // FUCKING PHASER :S
+            // WHEN PEOPLE TELL YOU PHASERS DOCUMENTATION IS GREAT, ATTEMPT TO USE A VARIABLE LIKE STREAM WHERE THERES ONLY TWO MENTIONS OF IT
+            // ONE ON NOTES
+            // AND THE 2ND IN EXAMPLES, WHICH ASSUMES YOU WANT TO STREAM ON CREATE. WITH NO EXPLANATION OF WHAT IT WAITS ON BEFORE INITIALISING IN ITS CREATE FUNCTION - I ASSUME WE JUST HAVE TO GUESS AS PER FUKN USUAL
+
+            // ITS POSSIBLE I COULD MESS ABOUT WITH MY LOADER CODE. START LOADING THE STREAM BUT IGNORE IT WHEN ADDING TO THE FILESIZE COUNTER
+            // BUT IM NOT TAKING THE CHANCE WHEN HOWL CAN DO IT NO PROBLEM
+            
+            // SIDE NOTE: IT TOOK ME ABOUT 30 SECONDS TO DOWNLOAD HOWLER AND IMPLEMENT THIS (vars.audio.loadStream)
+            setTimeout( ()=> {
+                vars.DEBUG ? console.log(`🎵 Playing stream with name ${_key}`) : null;
+                scene.sound.add(_key).play();
+            }, 10000);
         },
 
         playeWinLose: (_winner)=> {
@@ -544,9 +600,16 @@ var vars = {
             vars.audio.playSound(shuffle(vars.audio.dice)[0]);
         },
 
-        stream: ()=> {
-            // get random stream and load it
-
+        setVolume: (_vol)=> { // incoming volume will be 0 -> 1
+            if (_vol>0 && _vol<=1) {
+                let vV = vars.audio.volume;
+                let mult = vV.multiplier;
+                vV.howler = _vol;
+                vV.phaser=vV.howler*mult;
+                console.log(`🔊 Setting stream volumes to ${_vol}. Sound effect volume is now ${vV.phaser}`);
+            } else {
+                return false;
+            }
         }
     },
 
@@ -946,6 +1009,10 @@ var vars = {
                     setTimeout( ()=> {
                         vars.init(3);
                     }, dur*(4/5))
+
+                    // load an ambience stream
+                    vars.audio.loadStream();
+
                 } else if (oName.includes('counter')) {
                     vars.animate.counterToNewPosition(gameObject);
                 } else if (oName = 'popupBG') {
