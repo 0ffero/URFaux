@@ -109,8 +109,11 @@ vars.files = {
             aV.countersMove.forEach( (_a)=> { scene.load.audio(_a, `${aD}${_a}${o}`); })
 
             // voice overs
+            // taken from https://www.naturalreaders.com/online/
+            // peters voice
+            // 24.38% volume - Reverb type: room
             aD = 'audio/voice/';
-            ['player1', 'player2', 'youWin', 'youLose'].forEach( (_v)=> {
+            ['player', 'rollAgain', 'rollDice', 'youLose', 'youWin', 'youRolledA', 'gameOver', '0', '1', '2', '3', '4'].forEach( (_v)=> {
                 scene.load.audio(_v, `${aD}${_v}${o}`);
             });
         }
@@ -122,6 +125,7 @@ vars.files = {
             scene.load.image('boardBG',      'images/board.png');
             scene.load.atlas('counters',     'images/counters.png', 'images/counters.json');
             scene.load.atlas('dice',         'images/dice.png', 'images/dice.json');
+            scene.load.atlas('playerFaces',  'images/playerFaces.png', 'images/playerFaces.json');
             scene.load.image('loadedBG',     'images/loadedScreen.jpg');
             scene.load.image('loadedButton', 'images/loaded.png');
             scene.load.image('shielded',     'images/shielded.png');

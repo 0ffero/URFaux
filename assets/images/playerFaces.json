@@ -1,0 +1,54 @@
+{
+	"frames": [
+		{
+			"filename": "player1Face",
+			"frame": {
+				"x": 1,
+				"y": 1,
+				"w": 246,
+				"h": 318
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 246,
+				"h": 318
+			},
+			"sourceSize": {
+				"w": 246,
+				"h": 318
+			}
+		},
+		{
+			"filename": "player2Face",
+			"frame": {
+				"x": 249,
+				"y": 1,
+				"w": 246,
+				"h": 318
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 246,
+				"h": 318
+			},
+			"sourceSize": {
+				"w": 246,
+				"h": 318
+			}
+		}
+	],
+	"meta": {
+		"app": "offeroTPFix",
+		"version": "1.0",
+		"image": "playerFaces.png",
+		"format": "RGBA8888",
+		"size": { "w": 496, "h": 320 },
+		"scale": "1"
+	}
+}

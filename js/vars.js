@@ -1,7 +1,7 @@
 var vars = {
     DEBUG: false,
 
-    version: 0.81,
+    version: 0.83,
 
     clamp: Phaser.Math.Clamp,
 
@@ -210,12 +210,12 @@ var vars = {
                 }
 
                 if (win===true) {
-                    // show win message etc TODO
+                    // show win message etc
                     pV.win = true;
                     let winner = pV.current;
                     pV.wins[winner]++;
                     vars.UI.showMessage(`PLAYER ${winner} WINS!`, -1);
-                    vars.audio.playeWinLose(winner);
+                    vars.audio.playerWinLose(winner);
                     return false;
                 }
 
@@ -424,6 +424,18 @@ var vars = {
             }))
         },
 
+        changeFace: ()=> {
+            let player = vars.player.current;
+            let pOb = vars.phaserObject.quickGet('playerFace');
+            scene.tweens.add({
+                targets: pOb,
+                alpha: 0,       
+                yoyo: true,
+                onYoyo: (_t, _o)=> { _o.setFrame(`player${player}Face`); },
+                duration: 500
+            })
+        },
+
         pointsCount: (_p, _show=true)=> {
             if (_p===null) { _p=vars.phaserObject.quickGet('pointsCount'); } // when showing the points, the points text object is passed in, otherwise we have to grab it
             let alpha = _show === true ? 1 : 0;
@@ -515,9 +527,10 @@ var vars = {
         streamPlaying: false,
         player1_length: 800,
         player2_length: 1000,
+        sentence: [],
         volume: {
             howler: 0.3,
-            phaser: 0.2,
+            phaser: 1,
 
             multiplier: -1
         },
@@ -530,8 +543,8 @@ var vars = {
             scene.sound.volume=aV.volume.phaser;
             aV.streams = Phaser.Utils.Array.NumberArray(0,9,'busymarketplaceFIFO');
             // as howler deals with streams which are quieter than the sound effects (my bad) we need a multiplier so we can chane the volume
-            aV.volume.multiplier = aV.volume.phaser/aV.volume.howler;
-            console.log(`    🔊 Initialising volume multiplier (set to ${aV.volume.multiplier}).`);
+            aV.volume.multiplier = aV.volume.howler/aV.volume.phaser;
+            console.log(`    🔊 Initialising volume multiplier (set to ${~~(aV.volume.multiplier*1000)/1000}).`);
         },
 
         loadStream: ()=> {
@@ -576,23 +589,8 @@ var vars = {
             }, 10000);
         },
 
-        playeWinLose: (_winner)=> {
-            let aV = vars.audio;
-            let other = vars.player.getCurrent()[1];
-            let timeOut = aV[`player${_winner}_length`];
-            let timeOutOther = aV[`player${other}_length`];
-
-            vars.audio.playSound(`player${_winner}`);
-            setTimeout( ()=> {
-                vars.audio.playSound('youWin');
-
-                setTimeout( ()=> {
-                    vars.audio.playSound(`player${other}`)
-                    setTimeout( ()=> {
-                        vars.audio.playSound('youLose')
-                    }, timeOutOther)
-                }, 800);
-            }, timeOut);
+        playerWinLose: (_winner)=> {
+            vars.audio.sentenceBuild('pwin');
         },
 
         rollDice: ()=> {
@@ -600,16 +598,93 @@ var vars = {
             vars.audio.playSound(shuffle(vars.audio.dice)[0]);
         },
 
-        setVolume: (_vol)=> { // incoming volume will be 0 -> 1
+        say: ()=> {
+            _sentence=vars.audio.sentence;
+            // this takes an array (or 'sentence') and says each word one after the other
+            if (Array.isArray(_sentence) && _sentence.length!==0) {
+                let aV = vars.audio;
+                let word = aV.sentence.splice(0,1)[0];
+                let isWord = true;
+                if (word==='pause') {
+                    isWord=false;
+                    console.log(`Word is 'pause'. Waiting 250ms`);
+                } else { // its a voice
+                    console.log(`🗩 Word is ${word}. Saying it.`);
+                }
+
+                if (isWord) {
+                    scene.sound.add(word).on('complete', vars.audio.say).play();
+                } else {
+                    setTimeout( ()=> {
+                        vars.audio.say();
+                    }, 500)
+                }
+                console.log(`  ${_sentence.length} word(s) left to say`);
+            } else {
+                console.log(`🙊 No more words left to say.`);
+            }
+        },
+
+        sentenceBuild: (_what)=> {
+            let player = vars.player.getCurrent()
+            player[0] = player[0].toString();
+            player[1] = player[1].toString();
+            let aV = vars.audio;
+            let sentence = aV.sentence;
+
+            // if we already have a sentence, we need to add a pause between the old one and this one.
+            let sLength = sentence.length;
+            if (sLength>0) {
+                sentence.push('pause', 'pause');
+            }
+            let fail = false;
+            switch (_what) {
+                case 'pwin': sentence.push('player', player[0], 'pause', 'youWin', 'pause', 'player', player[1], 'pause', 'youLose', 'pause', 'gameOver'); break;
+                case 'proll': sentence.push('player', player[0], 'pause', 'rollDice'); break;
+                case 'rollagain': sentence.push('player', player[0], 'pause', 'rollAgain'); break;
+                case 'rolled': sentence.push('youRolledA', vars.player.pointsTotal.toString()); break;
+                default: console.log(`Unknown sentence requested (${_what})`); fail=true; break; 
+            }
+
+            if (fail) { return false; }
+
+            //vars.audio.sentence = sentence;
+            if (vars.DEBUG) {
+                console.log(`🗫 Built sentence`);
+                console.log(sentence);
+                console.log('Saying it...');
+            }
+            sLength===0 ? vars.audio.say() : null;
+        },
+
+        volumeSet: (_vol)=> { // incoming volume will be 0 -> 1
             if (_vol>0 && _vol<=1) {
                 let vV = vars.audio.volume;
                 let mult = vV.multiplier;
-                vV.howler = _vol;
-                vV.phaser=vV.howler*mult;
-                console.log(`🔊 Setting stream volumes to ${_vol}. Sound effect volume is now ${vV.phaser}`);
+                vV.phaser = _vol;
+                vV.howler=vV.phaser*mult;
+                console.log(`🔊 Setting non ambience volume to ${_vol}. Ambience volume is now ${vV.howler}`);
             } else {
                 return false;
             }
+        },
+
+        volumeChange: (_increase)=> {
+            if (_increase !== false && _increase !== true) { return false; }
+            let vV = vars.audio.volume;
+            let mult = vV.multiplier;
+            let inc = vars.clamp(_increase ? 0.1 : -0.1, 0, 1);
+            vV.howler += inc;
+            vars.clamp(vV.howler, 0, 1);
+            vV.phaser = vV.howler * mult;
+            vars.clamp(vV.phaser, 0, 1);
+
+            vars.audio.howlerStream.volume = vV.howler;
+            debugger;
+            // MAKE SURE THIS LINE WORKS!
+            scene.sound.volume = vV.phaser;
+
+            console.log(`New volume is ${vV.howler}`);
         }
     },
 
@@ -693,8 +768,8 @@ var vars = {
 
                     if (vars.player.diceComplete===4) { // all dice have been counted
                         console.groupEnd();
-                        // show the counter
-                        if (vars.force!==undefined) {
+
+                        if (vars.force!==undefined) { // if dice force is enabled
                             if (vars.force!==-1) {
                                 console.log(`🏋🎲 %cForcing Dice Roll to ${vars.force}`, 'color: green; font-weight: bold; font-size: 14px;');
                                 vars.player.pointsTotal=vars.force;
@@ -702,7 +777,13 @@ var vars = {
                                 console.log(`🏋🎲 %cForce is ON but force value is not set.`,'color: red; background-color: white; font-size: 14px;');
                             }
                         }
+                        // show the counter
                         vars.UI.showPointsCount();
+
+                        // VOICE
+                        vars.audio.sentenceBuild('rolled');
+
+
                         let validMoves = vars.game.getValidMoves();
 
                         // the player rolled a 0 (lol)
@@ -1073,6 +1154,7 @@ var vars = {
             sIK.createCombo('force3',   { resetOnMatch: true });
             sIK.createCombo('force2',   { resetOnMatch: true });
             sIK.createCombo('force1',   { resetOnMatch: true });
+            sIK.createCombo('force0',   { resetOnMatch: true });
             sIK.createCombo('forceOff', { resetOnMatch: true });
 
             sIK.on('keycombomatch', function (event) {
@@ -1143,8 +1225,13 @@ var vars = {
                 pV.current = pV.current === 1 ? 2 : 1;
                 if (_anotherShot!=='skip') { msg = `Player ${pV.current}\n\nPlease roll the dice`; }
                 vars.UI.playerUpdate(pV.current);
+                vars.audio.sentenceBuild('proll');
+
+                // change the player face
+                vars.animate.changeFace();
             } else {
                 msg = `Player ${pV.current}\n\nYou landed on a free shot sqaure\n\nPlease roll the dice again`;
+                vars.audio.sentenceBuild('rollagain');
             }
 
             if (_anotherShot!=='skip') { // show pop up message if applicable
@@ -1195,6 +1282,9 @@ var vars = {
             // draw the background (game board)
             scene.add.image(vars.canvas.cX, vars.canvas.cY, 'sandBG').setInteractive().setName('sandBG').setDepth(dC.sand);
             scene.add.image(vars.canvas.cX, vars.canvas.cY, 'boardBG').setInteractive().setName('gameBoard').setDepth(boardDepth);
+
+            // add the player faces
+            scene.add.image(50, 50, 'playerFaces', 'player1Face').setName('playerFace').setOrigin(0).setDepth(consts.depths.sand+1);
 
             // draw the background for the dice area
             scene.add.image(1350, 550, 'whitePixel').setName('diceBlackBG').setTint(0x0).setAlpha(0.35).setDepth(diceDepth-2).setScale(450,450).setOrigin(0);
