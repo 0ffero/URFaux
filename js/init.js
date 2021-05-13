@@ -13,11 +13,6 @@ var config = {
     width: vars.canvas.width,
     parent: 'URFaux',
 
-    /*
-	dom: {
-        createContainer: true
-    },
-	*/
     scale: {
         parent: 'URFaux',
         mode: Phaser.Scale.FIT,
@@ -36,7 +31,13 @@ var config = {
                 { type: 'image', key: 'loadingText', url: 'assets/images/loadingText.png' }
             ]
         }
-    }
+    },
+
+    banner: false,
+
+    version: vars.version.toString(),
+
+    url: window.origin
 };
 
 fetch("./assets/fileList.json").then(response => {
@@ -44,7 +45,7 @@ fetch("./assets/fileList.json").then(response => {
 }).then( (data)=> { 
     let fV = vars.files;
     fV.fileSizes=data;
-    // by the time we can show a loading bar, the loadingScreen and Text will already have laoded, so we add them here
+    // by the time we can show a loading bar, the loadingScreen and Text will already have loaded, so we add them here
     let fSV = fV.fileSizes;
     fSV.details.loadedSize=fSV.files['loadingScreen.jpg'] + fSV.files['loadingText.png'];
     game = new Phaser.Game(config);
@@ -68,7 +69,9 @@ function preload() {
     bar.object = scene.add.graphics().setDepth(dDepth);
     let box = gPV.box;
     box.object = scene.add.graphics().setDepth(dDepth-1);
-    box.object.fillStyle(0x222222, 0.8);
+    consts.colours.hex.grays === undefined ? consts.colours.init() : null; // if the grays arent initialised...
+    let gray = consts.colours.hex.grays[2];
+    box.object.fillStyle(gray, 0.8);
     box.object.fillRect(vars.canvas.cX-box.width/2, vars.canvas.height*0.85, box.width, box.height);
 
     // when a file loads, update the progress bar
@@ -102,7 +105,8 @@ function create() {
 
     let endTime = new Date();
     let totalTime = endTime - startTime;
-    console.log(`  ..Initialisation took ${totalTime}ms`);
+    console.log(`🕔 Initialisation took %c${totalTime}ms`, 'font-weight: bold');
+    endTime = startTime = null;
 
 
     if (totalTime<maxTime && vars.DEBUG!==true) {

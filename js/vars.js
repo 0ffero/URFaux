@@ -1,7 +1,7 @@
 var vars = {
     DEBUG: false,
 
-    version: 0.83,
+    version: 0.85,
 
     clamp: Phaser.Math.Clamp,
 
@@ -13,7 +13,7 @@ var vars = {
         bouncingCounters: [],
 
         init: function() {
-            console.log('  ..initialising animations and vars');
+            console.log('  .. 🌑🌒🌓🌕🌗🌘🌑 initialising animations and vars');
              vars.animate.popupWait=0;
         },
 
@@ -345,7 +345,7 @@ var vars = {
                 // convert it to a percentage
                 let loadedPercent = Phaser.Math.Clamp(~~(fFV.details.loadedSize/tot*100)/100, 0.01, 1);
                 vars.files.loaded = loadedPercent;
-                let kb = false;
+                let kb = true;
                 let logText = kb ? `${~~(loadedPercent*100).toLocaleString()}% - Loaded ${fSName}. (Adding: ${(fS[fSName]/1000).toLocaleString()}KB to ${(before/1000).toLocaleString()}KB = ${(fFV.details.loadedSize/1000).toLocaleString()}KB of ${(tot/1000).toLocaleString()}KB)` : `${~~(loadedPercent*100)}% - Loaded ${fSName}. (Adding: ${(fS[fSName]).toLocaleString()} to ${before.toLocaleString()} = ${fFV.details.loadedSize.toLocaleString()} of ${tot.toLocaleString()})`;
                 // console loading bar
                 let led = '🞕'; let ling ='🞔';
@@ -355,11 +355,12 @@ var vars = {
                     lText += loadingBarVar < lB ? ling : led;
                 }
                 vars.DEBUG ? console.log(`${lText} ${logText}`) : null;
-                // set the file to laoded
+                // set the file to loaded
                 fS[fSName] = 'Loaded';
                 // refresh the loading bar graphic
                 bar.object.clear();
-                bar.object.fillStyle(0xffffff, 1);
+                let grays = consts.colours.hex.grays;
+                bar.object.fillStyle(grays[grays.length-1], 1);
                 bar.object.fillRect(vars.canvas.cX-bar.width/2, vars.canvas.height*0.85+10, bar.width * loadedPercent, bar.height);
                 if (loadedPercent===1) {
                     // hide the progress bar
@@ -538,13 +539,13 @@ var vars = {
         howlerStream: null,
 
         init: function() {
-            console.log('  ..initialising audio and vars');
+            console.log('  .. 🔊 initialising audio and vars');
             let aV = vars.audio;
             scene.sound.volume=aV.volume.phaser;
             aV.streams = Phaser.Utils.Array.NumberArray(0,9,'busymarketplaceFIFO');
             // as howler deals with streams which are quieter than the sound effects (my bad) we need a multiplier so we can chane the volume
             aV.volume.multiplier = aV.volume.howler/aV.volume.phaser;
-            console.log(`    🔊 Initialising volume multiplier (set to ${~~(aV.volume.multiplier*1000)/1000}).`);
+            console.log(`  .. 🔊 Initialising volume multiplier (set to ${~~(aV.volume.multiplier*1000)/1000}).`);
         },
 
         loadStream: ()=> {
@@ -692,7 +693,7 @@ var vars = {
         mainCam: null,
 
         init: function() {
-            console.log('  ..initialising cameras and vars');
+            console.log('  .. 📷 initialising cameras and vars');
             vars.camera.mainCam = scene.cameras.main;
         },
 
@@ -777,13 +778,18 @@ var vars = {
                                 console.log(`🏋🎲 %cForce is ON but force value is not set.`,'color: red; background-color: white; font-size: 14px;');
                             }
                         }
+
+                        // check for zero protection
+                        // this stops a player throwing a zero twice in a row
+                        vars.player.checkZeroProtection();
+
                         // show the counter
                         vars.UI.showPointsCount();
 
                         // VOICE
                         vars.audio.sentenceBuild('rolled');
 
-
+                        // by this point, if zero protection was enabled for this player, they will at least have a roll of 1
                         let validMoves = vars.game.getValidMoves();
 
                         // the player rolled a 0 (lol)
@@ -811,7 +817,6 @@ var vars = {
                         // we have valid moves, enable counters
                         vars.input.countersEnable(true);
                         // bounce the counters that can move (done in gV.getValidMoves)
-
                     }
                 }
             }
@@ -1051,7 +1056,7 @@ var vars = {
         enabled: true,
 
         init: function() {
-            vars.DEBUG ? console.log('  ..initialising input and vars') : null;
+            vars.DEBUG ? console.log('  .. 🎮 initialising input and vars') : null;
             vars.DEBUG ? vars.input.enableCombos() : null;
             scene.input.on('gameobjectdown', function (pointer, gameObject) {
                 let iV = vars.input;
@@ -1181,13 +1186,17 @@ var vars = {
     particles: {
         init: function() {
             // particles are stored here
-            console.log('  ..initialising particles and vars');
+            console.log('  .. 🎆 initialising particles and vars');
         }
     },
 
     player: {
         betterLuck: true, // this changes the chances of the die to roll a one from 25% to 50% as a lot of 0's were being thrown
         current: 1,
+        zeroProtected: {
+            player1: false,
+            player2: false
+        },
         pointsTotal: 0, diceComplete: 0,
         win: false, // either: false, 1 or 2
         wins: {
@@ -1210,6 +1219,34 @@ var vars = {
         betterLuckFn: ()=> {
             console.log(' 🏋🎲...Better Luck Function');
             return shuffle([1,2])[0] === 1 ? 'dice1' : frameName = shuffle(Phaser.Utils.Array.NumberArray(2,4,'dice'))[0];
+        },
+
+        checkZeroProtection: (_player=vars.player.current)=> {
+            // the last dice has been rolled and the total was 0
+            // if the player rolled a 0 on their previous shot as well
+            // we force a 1
+            // when we enter this function, the last dice has been rolled, so the 0 is the players actual roll at this point
+            let pV = vars.player;
+            let pName = `player${_player}`;
+
+            if (pV.pointsTotal!==0) { // the the points total > 0
+                console.log(`Player didnt throw a zero. Resetting 0 protection and returning false`);
+                pV.zeroProtected[pName]=false; // reset the zero protection
+                return false;
+            }
+
+            // is the current player zero protected?
+            if (pV.zeroProtected[pName]) {
+                console.log(`🏋🎲 Player ${pV.current} is Zero Protected. Forcing a 1 and removing zero protection.`);
+                // force a 1
+                pV.pointsTotal=1;
+                vars.phaserObject.quickGet('dice4').setFrame('dice1');
+                pV.zeroProtected[pName]=false;
+            } else {
+                // player is NOT protected, so they should be protected for their next throw
+                console.log(`😇🍀 %cPlayer ${pV.current} wasnt zero protected. They are now.%c 🍀😇`, 'font-weight: bold; color: #008800; background-color: gold; font-size: 16px','');
+                pV.zeroProtected[pName] = true;
+            }
         },
 
         getCurrent: ()=> {
@@ -1284,7 +1321,8 @@ var vars = {
             scene.add.image(vars.canvas.cX, vars.canvas.cY, 'boardBG').setInteractive().setName('gameBoard').setDepth(boardDepth);
 
             // add the player faces
-            scene.add.image(50, 50, 'playerFaces', 'player1Face').setName('playerFace').setOrigin(0).setDepth(consts.depths.sand+1);
+            let pFace = scene.add.image(50, 50, 'playerFaces', 'player1Face').setName('playerFace').setOrigin(0).setDepth(consts.depths.message+1);
+            scene.tweens.add({ targets: pFace, y: pFace.y-25, yoyo: true, repeat: -1, duration: 500, ease: 'Quad' })
 
             // draw the background for the dice area
             scene.add.image(1350, 550, 'whitePixel').setName('diceBlackBG').setTint(0x0).setAlpha(0.35).setDepth(diceDepth-2).setScale(450,450).setOrigin(0);

@@ -6,6 +6,26 @@ const consts = {
     },
 
     colours: {
+        init: ()=> {
+            let cC = consts.colours;
+            cC.hex.grays = [];
+            cC.html.grays = [];
+            let graysHex = cC.hex.grays;
+            let graysHTML = cC.html.grays;
+            let inc = 0x111111
+            let colour=0x0;
+            console.groupCollapsed('🎨 Setting up gray colours');
+            while (colour<=0xffffff) {
+                graysHex.push(colour);
+                let html = `#${colour.toString(16)}`;
+                html +=html.length===2 ? '00000' : '';
+                graysHTML.push(html);
+                console.log(`Added colour: ${html}`);
+                colour+=inc;
+            }
+            console.groupEnd();
+        },
+
         html: {
             greens: ['#00b000','#00bb00','#00d000','#00dd00', '#00f000', '#00ff00'],
             reds: ['#900000', '#990000', '#b00000', '#bb0000', '#d00000', '#dd0000', '#f00000', '#ff0000']
@@ -37,7 +57,7 @@ const consts = {
     durations: {
         counterMove: 333,
         diceEndRoll: 2000,
-        popup: 500,
+        popup: 250,
         oneMinute: 60000
     },
 
