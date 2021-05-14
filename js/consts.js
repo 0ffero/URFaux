@@ -50,6 +50,7 @@ const consts = {
         counters: 15, // depth while counters are on the board
         dice: 15,
         shield: 20,
+        optionsScreen: 30,
         loading: 50,
         message: 80
     },
@@ -65,5 +66,13 @@ const consts = {
         // players start "off" the board in position wS/bS, follow their path and are "safe" when reaching wE/bE
         white: ['wS','w1','w2','w3','w4','a1','a2','a3','a4','a5','a6','a7','a8','w5','w6','wE'],
         black: ['bS','b1','b2','b3','b4','a1','a2','a3','a4','a5','a6','a7','a8','b5','b6','bE']
+    },
+
+    positions: {
+        playerFace: [50,50],
+        counters: {
+            white: [0,0],
+            black: [1,1],
+        }
     }
 }

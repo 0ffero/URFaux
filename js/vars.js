@@ -1,20 +1,33 @@
 var vars = {
     DEBUG: false,
 
-    version: 0.85,
+    version: 0.89,
 
     clamp: Phaser.Math.Clamp,
 
     // APP
     animate: {
-        popupWait: -1,
+        popupWait: 0,
         shieldTween: false,
+        hovering: null,
 
         bouncingCounters: [],
 
         init: function() {
             console.log('  .. 🌑🌒🌓🌕🌗🌘🌑 initialising animations and vars');
              vars.animate.popupWait=0;
+        },
+
+        changeFace: ()=> {
+            let player = vars.player.current;
+            let pOb = vars.phaserObject.quickGet('playerFace');
+            scene.tweens.add({
+                targets: pOb,
+                alpha: 0,       
+                yoyo: true,
+                onYoyo: (_t, _o)=> { _o.setFrame(`player${player}Face`); },
+                duration: 500
+            })
         },
 
         counterBounceTweensStop: ()=> {
@@ -52,15 +65,20 @@ var vars = {
 
             // black counters require a small offset to the x position
             let col = _oName.replace('counter','')[0];
+            let colName = col === 'w' ? 'white' : 'black';
             let xOffset = col === 'b' ? -20: 0;
 
             // set the counters depth based on the amount of counters at end position
-            let completed = vars.player.counters.white.completed.length;
+            let completed = vars.player.counters[colName].completed.length;
+            // update the completed var
+            vars.player.counters[colName].completed.push(_oName);
+
+            // figure out the counters final depth after move
             let depth = consts.depths.countersComplete + completed;
             depth += col === 'b' ? 10 : 0; // move the black counters above the board (white depths = 2-8, black depths = 12-18)
             ctr.setData({ finalDepth: depth });
 
-            // figure out the drop amount in px
+            // figure out the drop amount (y position) in px
             let maxDrop = 60;
             let counterYDrop = maxDrop - (completed * 10)
             // and animate
@@ -156,6 +174,7 @@ var vars = {
             // increase the counters depth so it moves above the other counters
             _cObject.setDepth(_cObject.depth+1);
             let bPs = vars.boardPositions;
+            let totalWait = 0;
             path.forEach( (_dest, _i)=> {
                 let x = bPs[_dest].x; let y = bPs[_dest].y;
 
@@ -168,7 +187,9 @@ var vars = {
                     delay: _i*dur,
                     onComplete: oC
                 })
+                totalWait = _i*dur;
             })
+            vars.animate.popupWait = totalWait;
         },
 
         counterUpdateFrame: (_t, _o, _lastCounter)=> {
@@ -215,6 +236,7 @@ var vars = {
                     let winner = pV.current;
                     pV.wins[winner]++;
                     vars.UI.showMessage(`PLAYER ${winner} WINS!`, -1);
+                    vars.animate.faceToCentre();
                     vars.audio.playerWinLose(winner);
                     return false;
                 }
@@ -274,6 +296,23 @@ var vars = {
 
                     duration: dur, delay: dur*i
                 })
+            })
+        },
+
+        faceToCentre: ()=> {
+            vars.DEBUG ? console.log('Sending player face to centre x.') : null;
+            let pf = vars.phaserObject.quickGet('playerFace');
+            scene.tweens.add({ targets: pf, x: vars.canvas.cX, duration: 2000, ease: 'Quad' })
+        },
+
+        faceToStartPosition: ()=> {
+            let pfPos = consts.positions.playerFace;
+            let pf = vars.phaserObject.quickGet('playerFace');
+            scene.tweens.add({
+                targets: pf,
+                x: pfPos[0],
+                duration: 2000,
+                ease: 'Quad'
             })
         },
 
@@ -425,18 +464,6 @@ var vars = {
             }))
         },
 
-        changeFace: ()=> {
-            let player = vars.player.current;
-            let pOb = vars.phaserObject.quickGet('playerFace');
-            scene.tweens.add({
-                targets: pOb,
-                alpha: 0,       
-                yoyo: true,
-                onYoyo: (_t, _o)=> { _o.setFrame(`player${player}Face`); },
-                duration: 500
-            })
-        },
-
         pointsCount: (_p, _show=true)=> {
             if (_p===null) { _p=vars.phaserObject.quickGet('pointsCount'); } // when showing the points, the points text object is passed in, otherwise we have to grab it
             let alpha = _show === true ? 1 : 0;
@@ -478,6 +505,8 @@ var vars = {
         },
 
         showMessage: (_msg, _dur)=> { // variables have already been confirmed by this point
+            let delay = vars.animate.popupWait;
+            vars.animate.popupWait=0;
             vars.DEBUG ? console.log(`Generating pop up`) : null;
             let bg = vars.phaserObject.quickGet('popupBG');
             // set the message
@@ -486,7 +515,6 @@ var vars = {
 
             // now animate the popup
             let yoyo = true; let hold = _dur;
-            let oC = null;
             if (_dur===-1) { // this pop up doesnt disappear until its clicked
                 yoyo = false; hold = null; bg.setInteractive();
             }
@@ -495,15 +523,40 @@ var vars = {
             scene.tweens.add({
                 targets: msgText,
                 alpha: 1,
-                yoyo: yoyo, hold: hold, duration: duration*2,
+                yoyo: yoyo, hold: hold, duration: duration*2, delay: delay,
                 ease: 'Power1'
             })
             // BACKGROUND
             scene.tweens.add({
                 targets: bg,
                 alpha: 0.9,
-                yoyo: yoyo, hold: hold, duration: duration*2,
+                yoyo: yoyo, hold: hold, duration: duration*2, delay: delay,
                 ease: 'Power1'
+            })
+        },
+
+        showOptions: (_show=true)=> {
+            // first, set the depth of the player face
+            let pF = vars.phaserObject.quickGet('playerFace');
+            let d = _show ? consts.depths.optionsScreen-2 : consts.depths.message+1;
+            pF.setDepth(d);
+
+            // now fade in/out the options
+            let alpha = _show ? 1: 0;
+            let duration = 500;
+            scene.groups.options.children.each( (_o)=> {
+                let delay = 0;
+                if (alpha===0) { // if were fading out the delay should be on the background
+                    delay = _o.name==='opt_BG' ? duration : delay;
+                } else { // if were fading in the delay should be on everything else
+                    delay = _o.name==='opt_BG' ? delay : duration;
+                }
+
+                scene.tweens.add({
+                    targets: _o,
+                    alpha: alpha,
+                    duration: duration, delay: delay
+                })
             })
         },
 
@@ -608,9 +661,9 @@ var vars = {
                 let isWord = true;
                 if (word==='pause') {
                     isWord=false;
-                    console.log(`Word is 'pause'. Waiting 250ms`);
+                    vars.DEBUG ? console.log(`Word is 'pause'. Waiting 250ms`) : null;
                 } else { // its a voice
-                    console.log(`🗩 Word is ${word}. Saying it.`);
+                    vars.DEBUG ? console.log(`🗩 Word is ${word}. Saying it.`) : null;
                 }
 
                 if (isWord) {
@@ -620,9 +673,9 @@ var vars = {
                         vars.audio.say();
                     }, 500)
                 }
-                console.log(`  ${_sentence.length} word(s) left to say`);
+                vars.DEBUG ? console.log(`  ${_sentence.length} word(s) left to say`) : null;
             } else {
-                console.log(`🙊 No more words left to say.`);
+                vars.DEBUG ? console.log(`🙊 No more words left to say.`) : null;
             }
         },
 
@@ -644,7 +697,8 @@ var vars = {
                 case 'proll': sentence.push('player', player[0], 'pause', 'rollDice'); break;
                 case 'rollagain': sentence.push('player', player[0], 'pause', 'rollAgain'); break;
                 case 'rolled': sentence.push('youRolledA', vars.player.pointsTotal.toString()); break;
-                default: console.log(`Unknown sentence requested (${_what})`); fail=true; break; 
+                case 'novalid': sentence.push('noValid'); break;
+                default: console.warn(`Unknown sentence requested (${_what})`); fail=true; break; 
             }
 
             if (fail) { return false; }
@@ -718,13 +772,13 @@ var vars = {
             return _counterArray.length === 6 ? true : false;
         },
 
-        diceEnable: ()=> {
+        diceEnable: (_enable=true, _newGame=false)=> {
             // re-enable the dice
             let diceArray = vars.game.getDiceObjects();
             vars.input.diceEnable(diceArray, true);
             // reset all the dice data
             console.groupCollapsed('🎲 Reseting all dice')
-            diceArray.forEach( (d)=> { vars.game.resetDiceData(d); })
+            diceArray.forEach( (d)=> { vars.game.resetDiceData(d, _newGame); })
             console.groupEnd();
         },
 
@@ -797,7 +851,7 @@ var vars = {
                             // show some sort of error message and reset everything
                             console.log(`Player threw a 0. Showing pop up message`);
                             let players = vars.player.getCurrent();
-                            let msg = `Player ${players[0]} threw a 0.\n\nPlayer ${players[1]}, please throw the dice.`;
+                            let msg = `Player ${players[0]} threw a 0.\n\nPlayer ${players[1]}, please roll the dice.`;
                             vars.UI.showMessage(msg);
                             // reset the player variables
                             vars.player.nextPlayer('skip');
@@ -811,6 +865,10 @@ var vars = {
                             let msg = `Player ${currentPlayer[0]}.\nNo valid moves found.\n\nPlayer ${currentPlayer[1]}, please roll the dice.`;
                             vars.UI.showMessage(msg);
                             vars.player.nextPlayer('skip');
+
+                            // we need to add a voice here saying no move found TODO
+                            vars.audio.sentenceBuild('novalid');
+
                             return false;
                         }
 
@@ -977,6 +1035,39 @@ var vars = {
             return validMoves;
         },
 
+        resetBoard: ()=> {
+            vars.DEBUG ? console.groupCollapsed('Resetting all board positions'): null;
+            for (bP in vars.boardPositions) {
+                vars.DEBUG ? console.log(bP) : null;
+                let thisBP = vars.boardPositions[bP];
+                vars.DEBUG ? console.log(thisBP) : null;
+                thisBP.takenByPlayer=0;
+                if (!bP.includes('E')) {
+                    thisBP.counterName='';
+                } else {
+                    thisBP.counterName=[];
+                }
+                vars.DEBUG ? console.log(thisBP) : null;
+                vars.DEBUG ? console.log('-----------------------------------------------------------------') : null;
+            }
+            vars.DEBUG ? console.groupEnd() : null;
+        },
+
+        resetCounters: ()=> {
+            // reset the vars
+            vars.player.init();
+
+            // reset the counter objects
+            let bPs = vars.boardPositions;
+            ['blackCounters','whiteCounters'].forEach( (_cC, i)=> {
+                scene.groups[_cC].children.each( (_c)=> {
+                    let xy = _c.name.includes('w') ? [ bPs.wS.x, bPs.wS.y] : [ bPs.bS.x, bPs.bS.y];
+                    _c.setData({ moveFrom : '', moveTo: '', boardPosition: '', x: xy[0], y: xy[1] });
+                    vars.DEBUG ? console.log(_c.data.list) : null;
+                })
+            })
+        },
+
         resetDiceData: (_o, _newGame=false)=> {
             _o.setData({ rollNumber: 0 })
             vars.DEBUG ? console.log(`  Die with name ${_o.name} has been reset.`) : null;
@@ -985,6 +1076,27 @@ var vars = {
 
         restart: ()=> {
             console.log(`Restart requested...`);
+            let aV = vars.animate;
+            // send the player face back to start position
+            aV.faceToStartPosition();
+
+            // reset all dice + vars
+            // ive decided to disable the dice when resetting them as ill
+            // be implementing a screen between the pop up and the new game
+            vars.phaserObject.quickGet('pointsCount').setText('4');
+            vars.game.diceEnable(false, true);
+
+            // reset all counters + vars
+            vars.game.resetCounters();
+
+            // reset player vars
+            vars.player.reset();
+
+            // reset the board var
+            vars.game.resetBoard();
+
+            // hide the pop up
+            vars.UI.showStartScreen();
         },
 
         rollDice: ()=> {
@@ -1005,6 +1117,12 @@ var vars = {
 
             // highlight current players pieces that can move
             // this is done in after all dice have been randomised 4 times. Its handled in game.diceUpdate
+        },
+
+        start: ()=> {
+            console.log('%c*********************\n*** Starting Game ***\n*********************', 'font-size: 16px; background-color: #004400; font-weight: bold;');
+            // hide all the options stuff
+            vars.animate.showOptions(false);
         },
 
         takePiece: (_objectName)=> {
@@ -1066,61 +1184,100 @@ var vars = {
                     return false;
                 }
 
-                // click functions
-                let oName = gameObject.name;
-                vars.DEBUG ? console.log(`🎮 Input: User clicked on ${oName}`) : null;
-                if (oName.includes('dice')) {
-                    console.clear();
-                    // roll dice
-                    vars.game.rollDice();
-                } else if (oName==='loadedButton') {
-                    console.clear();
-                    gameObject.disableInteractive();
-                    // fade out the loaded screen and text
-                    // then start the game
-                    let bg = vars.phaserObject.quickGet('loadedBG');
-                    let btn = vars.phaserObject.quickGet('loadedButton');
-                    let dur=2000;
-                    if (vars.DEBUG) { dur=0; }
-                    scene.tweens.add({
-                        targets: [bg,btn],
-                        alpha: 0,
-                        duration: dur,
-                        onComplete: vars.phaserObject.destroy
-                    })
-
-                    // play menu ok sound
-                    vars.audio.playSound('menuOK');
-
-                    setTimeout( ()=> {
-                        vars.init(3);
-                    }, dur*(4/5))
-
-                    // load an ambience stream
-                    vars.audio.loadStream();
-
-                } else if (oName.includes('counter')) {
-                    vars.animate.counterToNewPosition(gameObject);
-                } else if (oName = 'popupBG') {
-                    // this is the pop up background
-                    if (vars.player.win===true) {
-                        // restart the game
-                        vars.game.restart();
-                    } else {
-                        console.warn(`Pop up background was clicked. But the win variable is currently false.\nThis will fire when implementing new reasons to keep the background visible.`);
-                    }
-                } else {
-                    console.log(`🎮 Game object with name "${gameObject.name}" was clicked. No handler found.`);
-                }
+                vars.input.clicked(gameObject);
             })
 
             scene.input.on('gameobjectover', function (pointer, gameObject) {
+                return false;
                 // over functions
+                let oName = gameObject.name;
+                if (oName.includes('opt')) {
+                    debugger;
+                    if (oName.includes('Arrow')) {
+                        /* vars.animate.hovering = scene.tweens.add({
+                            targets: gameObject,
+                            scale: 1.1,
+                            duration: 1,
+                            repeat: -1
+                        }) */
+                    }
+                }
             });
 
             scene.input.on('gameobjectout', function (pointer, gameObject) {
+                return false;
                 // out functions
+                let oName = gameObject.name;
+                if (oName.includes('opt')) {
+                    debugger;
+                    // destroy the tween that was created
+                    if (vars.animate.hovering!==null) {
+                        // we need to figure out what we were animating
+
+                        // now stop the hovering animation
+                        vars.animate.hovering.stop();
+                        vars.animate.hovering=null;
+
+                        // set the scale back to 1
+                    }
+                }
             });
+        },
+
+        clicked: (gameObject)=> {
+            // click functions
+            let oName = gameObject.name;
+            vars.DEBUG ? console.log(`🎮 Input: User clicked on ${oName}`) : null;
+            if (oName.includes('dice')) {
+                console.clear();
+                // roll dice
+                vars.game.rollDice();
+            } else if (oName==='loadedButton') {
+                console.clear();
+                gameObject.disableInteractive();
+                // fade out the loaded screen and text
+                // then start the game
+                let bg = vars.phaserObject.quickGet('loadedBG');
+                let btn = vars.phaserObject.quickGet('loadedButton');
+                let dur=2000;
+                if (vars.DEBUG) { dur=0; }
+                scene.tweens.add({
+                    targets: [bg,btn],
+                    alpha: 0,
+                    duration: dur,
+                    onComplete: vars.phaserObject.destroy
+                })
+
+                // play menu ok sound
+                vars.audio.playSound('menuOK');
+
+                setTimeout( ()=> {
+                    vars.init(3);
+                }, dur*(4/5))
+
+                // load an ambience stream
+                vars.audio.loadStream();
+
+            } else if (oName.includes('counter')) {
+                vars.animate.counterToNewPosition(gameObject);
+            } else if (oName === 'popupBG') {
+                // this is the pop up background
+                if (vars.player.win===true) {
+                    // restart the game
+                    vars.game.restart();
+                } else {
+                    console.warn(`Pop up background was clicked. But the win variable is currently false.\nThis will fire when implementing new reasons to keep the background visible.`);
+                }
+            } else if (oName.includes('Arrow')) {
+                vars.UI.changePlayerFace(gameObject);
+            } else if (oName === 'optPlay') {
+                // play menu ok sound
+                gameObject.disableInteractive();
+                vars.audio.playSound('menuOK');
+                vars.game.start();
+            } else {
+                console.log(`🎮 Game object with name "${gameObject.name}" was clicked. No handler found.`);
+            }
         },
 
         countersEnable: (_enable=true)=> {
@@ -1320,8 +1477,9 @@ var vars = {
             scene.add.image(vars.canvas.cX, vars.canvas.cY, 'sandBG').setInteractive().setName('sandBG').setDepth(dC.sand);
             scene.add.image(vars.canvas.cX, vars.canvas.cY, 'boardBG').setInteractive().setName('gameBoard').setDepth(boardDepth);
 
-            // add the player faces
-            let pFace = scene.add.image(50, 50, 'playerFaces', 'player1Face').setName('playerFace').setOrigin(0).setDepth(consts.depths.message+1);
+            // add game PLAYER FACES
+            let pfPos = consts.positions.playerFace;
+            let pFace = scene.add.image(pfPos[0], pfPos[1], 'playerFaces', 'player1Face').setName('playerFace').setOrigin(0).setDepth(consts.depths.optionsScreen-2); // this depth changes when the game starts
             scene.tweens.add({ targets: pFace, y: pFace.y-25, yoyo: true, repeat: -1, duration: 500, ease: 'Quad' })
 
             // draw the background for the dice area
@@ -1373,6 +1531,8 @@ var vars = {
 
             vars.UI.initLogo();
 
+            vars.UI.initOptionsScreen();
+
         },
 
         initLogo: ()=> {
@@ -1385,6 +1545,71 @@ var vars = {
                 })
             }, this);
             scene.textures.addBase64('logo', 'data:image/png;base64,' + vars.game.logo);
+        },
+
+        initOptionsScreen: ()=> {
+            let depth = consts.depths.optionsScreen;
+            scene.groups.options = scene.add.group();
+            let cV = vars.canvas;
+            let offsetX = 350;
+            let p1x = cV.cX - offsetX;
+            let p2x = cV.cX + offsetX;
+            let tY = 0 + 550;
+            let pY = 0 + 300;
+
+            let bg = scene.add.image(cV.cX, cV.cY, 'whitePixel').setName('opt_BG').setTint(0x0).setDepth(depth-1).setScale(vars.canvas.width, vars.canvas.height);
+            let p1Title = scene.add.image(p1x, tY, 'options').setName('opt_p1t').setFrame('optPlayer1').setDepth(depth);
+            let p2Title = scene.add.image(p2x, tY, 'options').setName('opt_p2t').setFrame('optPlayer2').setDepth(depth);
+            let p1Image = scene.add.image(p1x, pY, 'options').setName('opt_p1i').setFrame('faceMale').setDepth(depth);
+            let p2Image = scene.add.image(p2x, pY, 'options').setName('opt_p2i').setFrame('faceFemale').setDepth(depth);
+            
+            let optPlay = scene.add.image(cV.cX, cV.height-200, 'options').setFrame('optPlay').setName('optPlay').setDepth(depth).setInteractive();
+
+            scene.groups.options.addMultiple([bg,p1Title,p2Title,p1Image,p2Image,optPlay]);
+
+            // add the 4 "select player" buttons
+            let y = 300;
+            [p1Image,p2Image].forEach( (_p)=> {
+                ['optArrowLeft','optArrowRight'].forEach( (_a)=> {
+                    let x = _a.includes('Left') ? _p.x-250 : _p.x+250;
+                    let arrow = scene.add.image(x, y, 'options').setFrame(_a).setName(`${_a}_${_p.name.replace('opt_','')}`).setDepth(depth).setInteractive();
+                    scene.groups.options.add(arrow);
+                })
+            })
+            
+        },
+
+        changePlayerFace: (_object)=> { // the object entering here is the arrow
+            let player = _object.name.includes('p1') ? 1 : 2;
+            let direction = _object.name.includes('Left') ? 'l' : 'r';
+            let imageArray = ['faceFemale','faceMale','faceCPU'];
+            let pImage = vars.phaserObject.quickGet(`opt_p${player}i`);
+            let currentFrameName = pImage.frame.name;
+            vars.DEBUG ? console.log(`${direction==='l' ? 'Left' : 'Right' } arrow was clicked for player ${player}`) : null;
+
+            let aPos = -1;
+            imageArray.forEach( (_iN, _i)=> {
+                if (aPos===-1) {
+                    if (_iN===currentFrameName) { aPos = _i; }
+                }
+            })
+
+            let frameName = null;
+            if (aPos!==-1) {
+                if (direction==='r') {
+                    if (aPos === imageArray.length-1) { aPos=0; } else { aPos+=1; }
+                    if (player===1 & aPos===imageArray.length-1) { aPos=0; }
+                } else {
+                    if (aPos === 0) { aPos=imageArray.length-1; } else { aPos-=1; }
+                    if (player===1 & aPos===imageArray.length-1) { aPos=1; }
+                }
+            } else {
+                console.log(`Array position is invalid!`);
+                return false;
+            }
+            frameName = imageArray[aPos];
+
+            pImage.setFrame(frameName);
         },
 
         playerUpdate: (_p)=> {
@@ -1430,6 +1655,10 @@ var vars = {
             let pC = vars.phaserObject.quickGet('pointsCount');
             pC.setText(points);
             vars.animate.pointsCount(pC, true);
+        },
+
+        showStartScreen: ()=> {
+            
         }
     }
 
