@@ -1,4 +1,19 @@
 vars.debugFN = {
+    init: (totalTime)=> {
+        let dbgBG = scene.add.image(vars.canvas.width, 0, 'whitePixel').setName('dbgBG').setDepth(consts.depths.debug-1).setScale(300,220).setAlpha(0.33).setOrigin(1,0);
+        let dbgTxt = scene.add.text(vars.canvas.width, 0, `DEBUG ON. Game version: ${vars.version}\nInitialisation took ${totalTime}ms`).setAlign('right').setName('debugText').setOrigin(1,0).setColor('#0').setDepth(consts.depths.debug);
+        let dbgXY = scene.add.text(vars.canvas.width, 190, `x: -1, y: -1`).setAlign('right').setName('debugXY').setOrigin(1,0).setColor('#0').setDepth(consts.depths.debug);
+        let dbgForce = scene.add.text(vars.canvas.width, 150, `Force: Disabled`).setAlign('right').setName('dbgTextForce').setOrigin(1,0).setColor('#0').setFontSize(24).setFontStyle('bold').setDepth(consts.depths.debug);
+        scene.groups.debug.addMultiple([dbgXY, dbgTxt, dbgForce, dbgBG]);
+        vars.debugFN.showDebugBoard();
+        
+        quickGet = vars.phaserObject.quickGet;
+
+        scene.input.on('pointermove', function (pointer) {
+            quickGet('debugXY').setText(`x: ${~~pointer.x}, y: ${~~pointer.y}`)
+        });
+    },
+
     attackLaneInit: ()=> {
 
         console.groupCollapsed('Initialising counters...');
@@ -80,7 +95,7 @@ vars.debugFN = {
             let tintString = tint.toString(16);
             while (tintString.length<6) { tintString = '0' + tintString; }
             tintString = '#' + tintString;
-            console.log(`Adding position ${_bP} at ${x}, ${y}. Tint is ${tintString}`);
+            console.log(`Adding position ${_bP} at ${x}, ${y}. %cTint is ${tintString}`, `color: ${tintString}`);
             let posInt = _bP[1];
             if (posInt==6 && _bP[0]!=='a') { x+=spacing*2; }
             let dbp = scene.add.image(x,y,'debugBoardPieces').setDepth(debugDepth).setFrame(0).setName(`dbgBP_${_bP}`).setAlpha(0.8).setTint(tint).setData({ originalColour: tint });

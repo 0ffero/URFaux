@@ -21,7 +21,10 @@ vars.init = (stage=1)=> { // ENTRY POINT IS HERE
         v.UI.init();
         v.game.init();
         v.player.init();
-
+    }
+    
+    if (stage===4) {
+        v.UI.initGameScreen();
         vars.DEBUG ? vars.debugFN.attackLaneInit() : null;
     }
 }
@@ -69,7 +72,15 @@ vars.canvas = {
 
 vars.containers = {
     init: ()=> {
+        console.log(`  .. 🥡 initialising containers... kinda hungry tbh...`);
+        if (typeof scene.containers === 'object') { return false; }
+        scene.containers = {};
+        let volCon = scene.containers.volumeOptions = scene.add.container().setName('volumeOptions');
+        volCon.setPosition(0,vars.canvas.height-200);
+        volCon.setDepth(254);
 
+        // now add the vol options
+        vars.UI.initVolumeOptions();
     }
 }
 
@@ -123,14 +134,20 @@ vars.files = {
         init: ()=> {
             scene.load.image('sandBG',       'images/sand.jpg');
             scene.load.image('boardBG',      'images/board.png');
-            scene.load.atlas('counters',     'images/counters.png', 'images/counters.json');
-            scene.load.atlas('dice',         'images/dice.png', 'images/dice.json');
-            scene.load.atlas('playerFaces',  'images/playerFaces.png', 'images/playerFaces.json');
-            scene.load.atlas('options',      'images/optionImages.png', 'images/optionImages.json');
+            scene.load.atlas('counters',     'images/counters.png',      'images/counters.json');
+            scene.load.atlas('dice',         'images/dice.png',          'images/dice.json');
+            scene.load.atlas('options',      'images/optionImages.png',  'images/optionImages.json');
+            scene.load.atlas('optionsVolume','images/optionsVolume.png', 'images/optionsVolume.json');
+            scene.load.atlas('playerFaces',  'images/playerFaces.png',   'images/playerFaces.json');
+            scene.load.atlas('playerFacesF', 'images/playerFacesF.png',  'images/playerFacesF.json');
+            scene.load.image('playButtonBG', 'images/playButtonBG.jpg');
             scene.load.image('loadedBG',     'images/loadedScreen.jpg');
             scene.load.image('loadedButton', 'images/loaded.png');
             scene.load.image('shielded',     'images/shielded.png');
             scene.load.image('whitePixel',   'images/whitePixel.png');
+
+            // particles
+            scene.load.image('sandParticleImage', 'particles/whiteSmall.png');
 
             if (vars.DEBUG) {
                 scene.load.spritesheet('debugBoardPieces', 'images/debugBoardPieces-ext.png', { frameWidth: 30, frameHeight: 30, spacing: 2, margin: 1 })

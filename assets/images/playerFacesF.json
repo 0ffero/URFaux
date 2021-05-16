@@ -1,0 +1,57 @@
+{
+	"frames": [
+		{
+			"filename": "playerFaces1F",
+			"frame": {
+				"x": 1,
+				"y": 1,
+				"w": 290,
+				"h": 317
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 290,
+				"h": 317
+			},
+			"sourceSize": {
+				"w": 290,
+				"h": 317
+			}
+		},
+		{
+			"filename": "playerFaces2F",
+			"frame": {
+				"x": 293,
+				"y": 1,
+				"w": 290,
+				"h": 317
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 290,
+				"h": 317
+			},
+			"sourceSize": {
+				"w": 290,
+				"h": 317
+			}
+		}
+	],
+	"meta": {
+		"app": "http://www.codeandweb.com/texturepacker",
+		"version": "1.0",
+		"image": "playerFacesF.png",
+		"format": "RGBA8888",
+		"size": {
+			"w": 584,
+			"h": 319
+		},
+		"scale": "1"
+	}
+}

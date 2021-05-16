@@ -1,7 +1,7 @@
 var vars = {
     DEBUG: false,
 
-    version: 0.89,
+    version: 0.9,
 
     clamp: Phaser.Math.Clamp,
 
@@ -21,13 +21,7 @@ var vars = {
         changeFace: ()=> {
             let player = vars.player.current;
             let pOb = vars.phaserObject.quickGet('playerFace');
-            scene.tweens.add({
-                targets: pOb,
-                alpha: 0,       
-                yoyo: true,
-                onYoyo: (_t, _o)=> { _o.setFrame(`player${player}Face`); },
-                duration: 500
-            })
+            scene.tweens.add({ targets: pOb, alpha: 0, yoyo: true, onYoyo: (_t, _o)=> { _o.setFrame(`player${player}Face`); }, duration: 500 })
         },
 
         counterBounceTweensStop: ()=> {
@@ -235,7 +229,7 @@ var vars = {
                     pV.win = true;
                     let winner = pV.current;
                     pV.wins[winner]++;
-                    vars.UI.showMessage(`PLAYER ${winner} WINS!`, -1);
+                    vars.UI.showMessage(`PLAYER ${winner} WINS!`, -1, true);
                     vars.animate.faceToCentre();
                     vars.audio.playerWinLose(winner);
                     return false;
@@ -268,7 +262,7 @@ var vars = {
                 scene.tweens.add({
                     targets: _t, scale: 0.75,
                     duration: dur, delay: dur*i, ease: 'Quint.easeIn',
-                    onComplete: ()=> { vars.audio.playSound('sandHit'); vars.camera.shake(dur/10); }
+                    onComplete: ()=> { vars.audio.playSound('sandHit'); vars.camera.shake(50); vars.particles.available.sand.emitParticleAt(_t.x, _t.y); }
                 })
             })
 
@@ -560,6 +554,29 @@ var vars = {
             })
         },
 
+        showPlayerFace: ()=> {
+            let qg = vars.phaserObject.quickGet;
+            let cP = vars.player.current;
+            let playerFace = qg(`opt_p${cP}i`);
+            if (playerFace.x!==vars.canvas.cX) { // the player face is still in position for the options page
+                // before showing the face we need to reposition it
+                // set its depth to > message
+                let depth = consts.depths.message+1;
+                playerFace.setPosition(vars.canvas.cX, 0+200).setDepth(depth);
+            }
+
+            // we need the duration of the showMessage so we can fade in and out the face at the same time as the message is shown
+            let duration = 1000; // test data only <-- this needs to be figured out at run time. TODO
+            scene.tweens.add({
+                targets: playerFace,
+                alpha: 1,
+                yoyo: true,
+                duration: duration*0.33,
+                hold: duration*0.75,
+                delay: duration*0.5
+            })
+        },
+
         startingCounter: (_cID, _moveTo) => {
             let playerColour = _cID.replace('counter','')[0] === 'w' ? 'white' : 'black';
             console.log(`  > Showing starter counter for ${playerColour}`);
@@ -571,6 +588,20 @@ var vars = {
                 duration: 333
             })
             vars.animate.movableCounterBounce(counter);
+        },
+
+        showVolumeOptions(_show=true) {
+            let container = scene.containers.volumeOptions;
+
+            let duration = 500;
+            if (_show) {
+                // slide it up
+                scene.tweens.add({ targets: container, y: vars.canvas.height-200, duration: duration, ease: 'Quad.easeIn' })
+                // alpha to 1
+                scene.tweens.add({ targets: container, duration: duration/2, alpha: 1, ease: 'Quad.easeIn' })
+            } else {
+                scene.tweens.add({ targets: container, y: vars.canvas.height-20, duration: duration, ease: 'Quad.easeIn', onComplete: (_t,_o)=> { _o[0].setAlpha(0.7); } })
+            }
         }
     },
 
@@ -579,12 +610,10 @@ var vars = {
         countersMove: [],
         streams: [],
         streamPlaying: false,
-        player1_length: 800,
-        player2_length: 1000,
         sentence: [],
         volume: {
-            howler: 0.3,
-            phaser: 1,
+            howler: 0.18,
+            phaser: 0.6,
 
             multiplier: -1
         },
@@ -611,7 +640,7 @@ var vars = {
             // AND HERES HOW EASY IT IS IN HOWLER XD
             let src = `assets/audio/streams/ambience/${streamName}.ogg`;
             let volume = vars.audio.volume.howler; // the volume of these streams are really low, so I have to set the volume to 1
-            vars.audio.howlerStream = new Howl({src, volume: volume, autoplay: true});
+            vars.audio.howlerStream = new Howl({src, html5: true, preload: true, volume: volume, autoplay: true});
             vars.DEBUG ? console.log(`🎵 Playing stream with name ${streamName}`) : null;
             vars.audio.streamPlaying = true;
         },
@@ -712,34 +741,26 @@ var vars = {
             sLength===0 ? vars.audio.say() : null;
         },
 
-        volumeSet: (_vol)=> { // incoming volume will be 0 -> 1
-            if (_vol>0 && _vol<=1) {
-                let vV = vars.audio.volume;
-                let mult = vV.multiplier;
-                vV.phaser = _vol;
-                vV.howler=vV.phaser*mult;
-                console.log(`🔊 Setting non ambience volume to ${_vol}. Ambience volume is now ${vV.howler}`);
-            } else {
-                return false;
-            }
+        volumeSet: ()=> { // incoming volume will be 0 -> 1
+            let aV = vars.audio;
+            let vV = aV.volume;
+            vars.audio.howlerStream.volume(vV.howler);
+            scene.sound.setVolume(vV.phaser);
+            console.log(`🔊 Setting non ambience volume to ${vV.phaser}. Ambience volume is now ${vV.howler}`);
         },
 
         volumeChange: (_increase)=> {
             if (_increase !== false && _increase !== true) { return false; }
             let vV = vars.audio.volume;
             let mult = vV.multiplier;
-            let inc = vars.clamp(_increase ? 0.1 : -0.1, 0, 1);
-            vV.howler += inc;
-            vars.clamp(vV.howler, 0, 1);
-            vV.phaser = vV.howler * mult;
-            vars.clamp(vV.phaser, 0, 1);
+            let inc = _increase ? 0.1 : -0.1;
+            vV.phaser = vars.clamp(~~((vV.phaser + inc)*100)/100,0.1,1);
+            vV.howler = ~~(vV.phaser * mult *100)/100;
+            vV.howler = ~~(vV.howler*100)/100;
 
-            vars.audio.howlerStream.volume = vV.howler;
-            debugger;
+            vars.audio.volumeSet();
             // MAKE SURE THIS LINE WORKS!
             scene.sound.volume = vV.phaser;
-
-            console.log(`New volume is ${vV.howler}`);
         }
     },
 
@@ -1188,39 +1209,31 @@ var vars = {
             })
 
             scene.input.on('gameobjectover', function (pointer, gameObject) {
-                return false;
                 // over functions
                 let oName = gameObject.name;
                 if (oName.includes('opt')) {
-                    debugger;
                     if (oName.includes('Arrow')) {
-                        /* vars.animate.hovering = scene.tweens.add({
-                            targets: gameObject,
-                            scale: 1.1,
-                            duration: 1,
-                            repeat: -1
-                        }) */
+                        if (!gameObject.getData('over')) {
+                            vars.DEBUG? console.log(`Moved over a button (${oName}) - attaching tween`) : null;
+                            gameObject.setData('over',true);
+                            vars.animate.hovering = scene.tweens.add({ targets: gameObject, scale: 1.1, duration: 250, yoyo: true, repeat: -1 })
+                        }
                     }
                 }
             });
 
             scene.input.on('gameobjectout', function (pointer, gameObject) {
-                return false;
-                // out functions
+                if (gameObject.name==='gameBoard') { return false; }
+                if (vars.animate.hovering===null) { return false; }
+
                 let oName = gameObject.name;
+                console.log(`Moved away from a button (${oName}) - destroying its tween`);
                 if (oName.includes('opt')) {
-                    debugger;
-                    // destroy the tween that was created
-                    if (vars.animate.hovering!==null) {
-                        // we need to figure out what we were animating
-
-                        // now stop the hovering animation
-                        vars.animate.hovering.stop();
-                        vars.animate.hovering=null;
-
-                        // set the scale back to 1
-                    }
+                    vars.animate.hovering.targets[0].setData('over', false).setScale(1);
+                    vars.animate.hovering.stop();
+                    vars.animate.hovering=null;
                 }
+                return false;
             });
         },
 
@@ -1241,12 +1254,7 @@ var vars = {
                 let btn = vars.phaserObject.quickGet('loadedButton');
                 let dur=2000;
                 if (vars.DEBUG) { dur=0; }
-                scene.tweens.add({
-                    targets: [bg,btn],
-                    alpha: 0,
-                    duration: dur,
-                    onComplete: vars.phaserObject.destroy
-                })
+                scene.tweens.add({ targets: [bg,btn], alpha: 0, duration: dur, onComplete: vars.phaserObject.destroy })
 
                 // play menu ok sound
                 vars.audio.playSound('menuOK');
@@ -1274,6 +1282,8 @@ var vars = {
                 // play menu ok sound
                 gameObject.disableInteractive();
                 vars.audio.playSound('menuOK');
+
+                vars.init(4);
                 vars.game.start();
             } else {
                 console.log(`🎮 Game object with name "${gameObject.name}" was clicked. No handler found.`);
@@ -1341,25 +1351,41 @@ var vars = {
     },
 
     particles: {
+
+        available: { sand: null },
+
         init: function() {
             // particles are stored here
             console.log('  .. 🎆 initialising particles and vars');
+            
+            // sand hit
+            let depth = consts.depths.diceBG+1;
+            vars.particles.available.sand = scene.add.particles('sandParticleImage').setDepth(depth);
+            vars.particles.available.sand.createEmitter({
+                angle: { start: 0, end: 360, steps: 128 },
+                alpha: 0.8,
+                lifespan: 1000,
+                tint: 0x745003,
+                speed: { min: 100, max: 550 },
+                quantity: 512,
+                scale: { start: 0.5, end: 0 },
+                on: false
+            });
+
+
+            /* scene.input.on('pointerdown', function (pointer) {
+                vars.particles.available.sand.emitParticleAt(pointer.x, pointer.y);
+            }); */
         }
     },
 
     player: {
         betterLuck: true, // this changes the chances of the die to roll a one from 25% to 50% as a lot of 0's were being thrown
         current: 1,
-        zeroProtected: {
-            player1: false,
-            player2: false
-        },
+        zeroProtected: { player1: false, player2: false },
         pointsTotal: 0, diceComplete: 0,
         win: false, // either: false, 1 or 2
-        wins: {
-            1: 0,
-            2: 0,
-        },
+        wins: { 1: 0, 2: 0, },
 
         counters: {
             white: { atStart: [], completed: [] },
@@ -1382,7 +1408,7 @@ var vars = {
             // the last dice has been rolled and the total was 0
             // if the player rolled a 0 on their previous shot as well
             // we force a 1
-            // when we enter this function, the last dice has been rolled, so the 0 is the players actual roll at this point
+            // when we enter this function, the last dice has been rolled, so the 0 IS the players actual roll at this point
             let pV = vars.player;
             let pName = `player${_player}`;
 
@@ -1429,7 +1455,7 @@ var vars = {
             }
 
             if (_anotherShot!=='skip') { // show pop up message if applicable
-                vars.UI.showMessage(msg, 1000);
+                vars.UI.showMessage(msg, 1000, true);
             }
 
             // reset the player vars
@@ -1467,8 +1493,29 @@ var vars = {
     UI: {
         init: ()=> {
             console.log('  ..initialising the UI');
+
+            vars.UI.initLogo();
+            vars.UI.initOptionsScreen();
+
+            // the volume options are built in stage 2 from inside vars.containers
+        },
+
+        initLogo: ()=> {
+            scene.textures.once('addtexture', function () {
+                let logo = scene.add.image(vars.canvas.width-10, vars.canvas.height-10, 'logo').setDepth(consts.depths.debug).setOrigin(1,1).setScale(0.66).setAlpha(0);
+                scene.tweens.add( {
+                    targets: logo,
+                    alpha: 0.12,
+                    duration: consts.durations.oneMinute
+                })
+            }, this);
+            scene.textures.addBase64('logo', 'data:image/png;base64,' + vars.game.logo);
+        },
+
+        initGameScreen: ()=> {
             let dC = consts.depths;
             let boardDepth = dC.board;
+            let diceBGDepth = dC.diceBG;
             let diceDepth = dC.dice;
             let counterDepth = dC.counters;
             let msgDepth = dC.message;
@@ -1497,7 +1544,7 @@ var vars = {
             let dropShadows = []
             let dice = []
             positions.forEach( (_p, _i)=> {
-                dropShadows.push(scene.add.image(_p[0], _p[1], 'dice').setFrame('diceBG').setName(`d${_i+1}_Shadow`).setScale(scale).setAlpha(alpha).setDepth(diceDepth-1));
+                dropShadows.push(scene.add.image(_p[0], _p[1], 'dice').setFrame('diceBG').setName(`d${_i+1}_Shadow`).setScale(scale).setAlpha(alpha).setDepth(diceBGDepth));
                 dice.push(scene.add.image(_p[0], _p[1], 'dice').setName(`dice${_i+1}`).setScale(diceScale).setAlpha(alpha).setInteractive().setDepth(diceDepth).setData({ points: 1, rollNumber: 0 }));
             })
 
@@ -1528,23 +1575,6 @@ var vars = {
 
             // barrier for a4
             vars.animate.initBarrier();
-
-            vars.UI.initLogo();
-
-            vars.UI.initOptionsScreen();
-
-        },
-
-        initLogo: ()=> {
-            scene.textures.once('addtexture', function () {
-                let logo = scene.add.image(vars.canvas.width-10, vars.canvas.height-10, 'logo').setDepth(consts.depths.debug).setOrigin(1,1).setScale(0.66).setAlpha(0);
-                scene.tweens.add( {
-                    targets: logo,
-                    alpha: 0.12,
-                    duration: consts.durations.oneMinute
-                })
-            }, this);
-            scene.textures.addBase64('logo', 'data:image/png;base64,' + vars.game.logo);
         },
 
         initOptionsScreen: ()=> {
@@ -1572,10 +1602,29 @@ var vars = {
             [p1Image,p2Image].forEach( (_p)=> {
                 ['optArrowLeft','optArrowRight'].forEach( (_a)=> {
                     let x = _a.includes('Left') ? _p.x-250 : _p.x+250;
-                    let arrow = scene.add.image(x, y, 'options').setFrame(_a).setName(`${_a}_${_p.name.replace('opt_','')}`).setDepth(depth).setInteractive();
+                    let arrow = scene.add.image(x, y, 'options').setFrame(_a).setName(`${_a}_${_p.name.replace('opt_','')}`).setDepth(depth).setInteractive().setData({ over: false });
                     scene.groups.options.add(arrow);
                 })
             })
+            
+        },
+
+        initVolumeOptions: ()=> {
+            console.log(`  .. 🔈🔉🔊 initialising Volume options`);
+            let container = scene.containers.volumeOptions;
+
+            // add a background
+            let bg = scene.add.image(0,0,'whitePixel').setName('volOptBG').setScale(vars.canvas.width, 200).setTint(0x0).setAlpha(0.8).setOrigin(0);
+            // add the 3 volume buttons
+            volMute = scene.add.image(100, 100, 'optionsVolume').setFrame('volumeMute');
+            volDown = scene.add.image(250, 100, 'optionsVolume').setFrame('volumeDown');
+            volUp = scene.add.image(400, 100, 'optionsVolume').setFrame('volumeUp');
+            // add everything to the container
+            container.add([bg,volMute,volDown,volUp]);
+
+            setTimeout( ()=> {
+                vars.UI.showVolumeOptions(false);
+            }, 1000)
             
         },
 
@@ -1629,13 +1678,15 @@ var vars = {
             txtObj.setText(oldText).setData('old', newText);
         },
 
-        showMessage: (_message, _duration=2000)=>{
+        showMessage: (_message, _duration=2000, _showPlayer=false)=>{
             if (_message.length===0) {
                 console.error('The message length was 0!')
                 return false;
             }
 
             vars.animate.showMessage(_message, _duration);
+
+            _showPlayer ? vars.animate.showPlayerFace() : null;
         },
 
         showPlayerText: ()=> {
@@ -1659,6 +1710,10 @@ var vars = {
 
         showStartScreen: ()=> {
             
+        },
+
+        showVolumeOptions: (_show=true)=> {
+            vars.animate.showVolumeOptions(_show);
         }
     }
 

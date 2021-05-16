@@ -48,11 +48,13 @@ const consts = {
         countersComplete: 2, // depth of counters when they get to their finish position
         board: 10,
         counters: 15, // depth while counters are on the board
+        diceBG: 12,
         dice: 15,
         shield: 20,
         optionsScreen: 30,
         loading: 50,
-        message: 80
+        message: 80,
+        volumeOptions: 70
     },
 
     durations: {

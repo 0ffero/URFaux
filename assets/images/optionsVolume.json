@@ -1,0 +1,78 @@
+{
+	"frames": [
+		{
+			"filename": "volumeDown",
+			"frame": {
+				"x": 1,
+				"y": 1,
+				"w": 100,
+				"h": 116
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 100,
+				"h": 116
+			},
+			"sourceSize": {
+				"w": 100,
+				"h": 116
+			}
+		},
+		{
+			"filename": "volumeMute",
+			"frame": {
+				"x": 103,
+				"y": 1,
+				"w": 116,
+				"h": 116
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 116,
+				"h": 116
+			},
+			"sourceSize": {
+				"w": 116,
+				"h": 116
+			}
+		},
+		{
+			"filename": "volumeUp",
+			"frame": {
+				"x": 1,
+				"y": 119,
+				"w": 133,
+				"h": 116
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 133,
+				"h": 116
+			},
+			"sourceSize": {
+				"w": 133,
+				"h": 116
+			}
+		}
+	],
+	"meta": {
+		"app": "http://www.codeandweb.com/texturepacker",
+		"version": "1.0",
+		"image": "optionsVolume.png",
+		"format": "RGBA8888",
+		"size": {
+			"w": 220,
+			"h": 236
+		},
+		"scale": "1"
+	}
+}

@@ -13,7 +13,8 @@ function dirToArray($dir) {
         'busymarketplaceFIFO8.ogg',
         'busymarketplaceFIFO9.ogg',
         'favicon.png',
-        'smallImage.json'
+        'smallImage.json',
+        'blur.glsl.js'
     ];
     $result = array();
     $cdir = scandir($dir);
