@@ -65,15 +65,15 @@ fetch("./assets/fileList.json").then(response => {
 */
 var startTime = new Date();
 function preload() {
+    this.load.plugin('rexoutlinepipelineplugin', 'js/frameworks/rexoutlinepipelineplugin.min.js', true);
+    // var pipelineInstance = scene.plugins.get('rexoutlinepipelineplugin').add(gameObject, config); // <-- used when attaching to an image. This plug in has image outline!
     scene = this;
 
     // set up the loading progress bar
     let dDepth = consts.depths.debug;
     let gPV = vars.graphics.progress;
-    let bar = gPV.bar;
-    bar.object = scene.add.graphics().setDepth(dDepth);
-    let box = gPV.box;
-    box.object = scene.add.graphics().setDepth(dDepth-1);
+    let bar = gPV.bar; bar.object = scene.add.graphics().setDepth(dDepth);
+    let box = gPV.box; box.object = scene.add.graphics().setDepth(dDepth-1);
     consts.colours.hex.grays === undefined ? consts.colours.init() : null; // if the grays arent initialised...
     let gray = consts.colours.hex.grays[2];
     box.object.fillStyle(gray, 0.8);
@@ -91,6 +91,7 @@ function preload() {
     scene.load.setPath('assets');
     vars.init(1);
     console.groupCollapsed('Loading Assets');
+
 }
 
 

@@ -1,7 +1,7 @@
 var vars = {
     DEBUG: false,
 
-    version: 0.9,
+    version: 0.91,
 
     clamp: Phaser.Math.Clamp,
 
@@ -395,6 +395,15 @@ var vars = {
                 let grays = consts.colours.hex.grays;
                 bar.object.fillStyle(grays[grays.length-1], 1);
                 bar.object.fillRect(vars.canvas.cX-bar.width/2, vars.canvas.height*0.85+10, bar.width * loadedPercent, bar.height);
+
+                if (scene.load.progress===1) {
+                    console.log(`Finished loading files.`);
+                    if (loadedPercent!==1) {
+                        console.warn(` - All files loaded but the file list still has unloaded assets in it.`);
+                        console.table(vars.files.fileSizes.files);
+                    }
+                }
+
                 if (loadedPercent===1) {
                     // hide the progress bar
                     vars.DEBUG ? console.log(`🙈 🝙 Hiding the progress bar`) : null;
@@ -744,7 +753,9 @@ var vars = {
         volumeSet: ()=> { // incoming volume will be 0 -> 1
             let aV = vars.audio;
             let vV = aV.volume;
-            vars.audio.howlerStream.volume(vV.howler);
+            if (vars.audio.howlerStream!==null) {
+                vars.audio.howlerStream.volume(vV.howler);
+            }
             scene.sound.setVolume(vV.phaser);
             console.log(`🔊 Setting non ambience volume to ${vV.phaser}. Ambience volume is now ${vV.howler}`);
         },
@@ -758,7 +769,18 @@ var vars = {
             vV.howler = ~~(vV.phaser * mult *100)/100;
             vV.howler = ~~(vV.howler*100)/100;
 
+            // update the volume bar
+            let volBar = scene.containers.volumeOptions.getByName('gfx_volBar');
+            let maxWidth = 600;
+            let thisWidth = maxWidth*vV.phaser;
+
             vars.audio.volumeSet();
+
+            scene.tweens.add({
+                targets: volBar,
+                scaleX: thisWidth,
+                duration: 200
+            })
             // MAKE SURE THIS LINE WORKS!
             scene.sound.volume = vV.phaser;
         }
@@ -1220,10 +1242,29 @@ var vars = {
                         }
                     }
                 }
+
+                if (oName==='') { return false; }
+                /* if (oName ==='volOptBG') {
+                    if (scene.containers.volumeOptions!==undefined) {
+                        if (scene.containers.volumeOptions.y===1060) {
+                            vars.animate.showVolumeOptions(true);
+                        } else if (scene.containers.volumeOptions.y===880) {
+                            //vars.animate.showVolumeOptions(true);
+                        }
+                    }
+                } */
             });
 
             scene.input.on('gameobjectout', function (pointer, gameObject) {
                 if (gameObject.name==='gameBoard') { return false; }
+                /* if (gameObject.name === 'volOptBG') {
+                    if (scene.containers.volumeOptions!==undefined) {
+                        if (scene.containers.volumeOptions.y===880) {
+                            vars.animate.showVolumeOptions(false);
+                        }
+                    }
+                } */
+
                 if (vars.animate.hovering===null) { return false; }
 
                 let oName = gameObject.name;
@@ -1277,6 +1318,7 @@ var vars = {
                     console.warn(`Pop up background was clicked. But the win variable is currently false.\nThis will fire when implementing new reasons to keep the background visible.`);
                 }
             } else if (oName.includes('Arrow')) {
+                vars.audio.playSound('menuClick');
                 vars.UI.changePlayerFace(gameObject);
             } else if (oName === 'optPlay') {
                 // play menu ok sound
@@ -1285,6 +1327,13 @@ var vars = {
 
                 vars.init(4);
                 vars.game.start();
+            } else if (oName.includes('volume')) {
+                switch (oName) {
+                    case 'volumeDown': vars.audio.volumeChange(false); break;
+                    case 'volumeUp': vars.audio.volumeChange(true); break;
+                }
+            } else if(oName==='volOptBG') {
+                vars.UI.showVolumeOptions();
             } else {
                 console.log(`🎮 Game object with name "${gameObject.name}" was clicked. No handler found.`);
             }
@@ -1614,17 +1663,23 @@ var vars = {
             let container = scene.containers.volumeOptions;
 
             // add a background
-            let bg = scene.add.image(0,0,'whitePixel').setName('volOptBG').setScale(vars.canvas.width, 200).setTint(0x0).setAlpha(0.8).setOrigin(0);
+            let bg = scene.add.image(0,0,'whitePixel').setName('volOptBG').setScale(vars.canvas.width, 200).setTint(0x0).setAlpha(0.8).setOrigin(0).setInteractive();
             // add the 3 volume buttons
-            volMute = scene.add.image(100, 100, 'optionsVolume').setFrame('volumeMute');
-            volDown = scene.add.image(250, 100, 'optionsVolume').setFrame('volumeDown');
-            volUp = scene.add.image(400, 100, 'optionsVolume').setFrame('volumeUp');
-            // add everything to the container
-            container.add([bg,volMute,volDown,volUp]);
+            volMute = scene.add.image(100, 100, 'optionsVolume').setFrame('volumeMute').setName('volumeMute').setInteractive();
+            volDown = scene.add.image(250, 100, 'optionsVolume').setFrame('volumeDown').setName('volumeDown').setInteractive();
+            volUp = scene.add.image(400, 100, 'optionsVolume').setFrame('volumeUp').setName('volumeUp').setInteractive();
+            
+            //volbarBG = scene.add.graphics().setName('gfx_volBarBG');
+            let w = 620; let h =  70;
+            let x = 550; let y = 100;
+            volbarBG = scene.add.image(x, y, 'whitePixel').setTint(0x0000B2).setName('gfx_volBarBG').setScale(w,h).setOrigin(0,0.5);
 
-            setTimeout( ()=> {
-                vars.UI.showVolumeOptions(false);
-            }, 1000)
+            w = 600; h =  50;
+            volbar = scene.add.image(x+10, y, 'whitePixel').setTint(0x31D2F7).setName('gfx_volBar').setScale(w,h).setOrigin(0,0.5);
+
+            // add everything to the container
+            container.add([bg,volMute,volDown,volUp,volbarBG, volbar]);
+            setTimeout( ()=> { vars.UI.showVolumeOptions(false); }, 1000)
             
         },
 
@@ -1713,6 +1768,11 @@ var vars = {
         },
 
         showVolumeOptions: (_show=true)=> {
+            if (scene.containers.volumeOptions.y===1060) {
+                _show = true;
+            } else {
+                _show = false;
+            }
             vars.animate.showVolumeOptions(_show);
         }
     }

@@ -75,7 +75,7 @@ vars.containers = {
         console.log(`  .. 🥡 initialising containers... kinda hungry tbh...`);
         if (typeof scene.containers === 'object') { return false; }
         scene.containers = {};
-        let volCon = scene.containers.volumeOptions = scene.add.container().setName('volumeOptions');
+        let volCon = scene.containers.volumeOptions = scene.add.container().setName('volumeOptions').setData('visible', false);
         volCon.setPosition(0,vars.canvas.height-200);
         volCon.setDepth(254);
 
@@ -103,8 +103,9 @@ vars.files = {
             let o = '.ogg';
             let aV = vars.audio;
 
-            // load the menu ok sound
+            // load the menu ok nd click sound
             scene.load.audio('menuOK', `audio/menuOK${o}`);
+            scene.load.audio('menuClick', `audio/menuClick${o}`);
 
             // load the dice audio
             let aD = 'audio/dice/';
