@@ -1,7 +1,7 @@
 var vars = {
     DEBUG: false,
 
-    version: 0.91,
+    version: 0.93,
 
     clamp: Phaser.Math.Clamp,
 
@@ -135,7 +135,7 @@ var vars = {
             startPosition === 'a4' ? vars.animate.showBarrier(false) : null;
 
             // increase the counters depth so it moves above the other counters
-            _object.setDepth(_object.depth+1);
+            _object.setDepth(_object.depth+2);
             // now start moving the counter
             let onComplete = vars.animate.counterUpdateFrame;
             counterMoves.forEach( (_m, _i)=> {
@@ -207,8 +207,8 @@ var vars = {
                 let taking = object.getData('taking');
                 if (taking!=='') { vars.game.takePiece(taking); }
 
-                // decrease the counters depth so it moves above the other counters
-                object.setDepth(object.depth-1);
+                // decrease the counters depth so it moves back to its original depth
+                object.setDepth(object.depth-2);
 
                 // UPDATE THE BOARD POSITIONS
                 let bP = vars.boardPositions[bPos];
@@ -262,20 +262,18 @@ var vars = {
                 scene.tweens.add({
                     targets: _t, scale: 0.75,
                     duration: dur, delay: dur*i, ease: 'Quint.easeIn',
-                    onComplete: ()=> { vars.audio.playSound('sandHit'); vars.camera.shake(50); vars.particles.available.sand.emitParticleAt(_t.x, _t.y); }
+                    onComplete: ()=> { vars.audio.playSound('sandHit'); vars.particles.available.sand.emitParticleAt(_t.x, _t.y); }//vars.camera.shake(50);
                 })
             })
 
             setTimeout( ()=> {
+                // when all four dice have falled, update the UI
                 vars.UI.showPlayerText();
             }, dur*4)
 
             _targets.forEach( (_t,i)=>{
-                scene.tweens.add({
-                    targets: _t, alpha: 1,
-                    duration: dur/2,
-                    delay: dur*i
-                })
+                // fade it in
+                scene.tweens.add({ targets: _t, alpha: 1, duration: dur/2, delay: dur*i })
             })
         },
 
@@ -284,12 +282,7 @@ var vars = {
             let dur = 1000;
             if (vars.DEBUG) { dur=0; }
             _targets.forEach( (_t,i)=> {
-                scene.tweens.add({
-                    targets: _t,
-                    alpha: 1,
-
-                    duration: dur, delay: dur*i
-                })
+                scene.tweens.add({ targets: _t, alpha: 1, duration: dur, delay: dur*i })
             })
         },
 
@@ -1199,6 +1192,8 @@ var vars = {
     },
 
     graphics: {
+        highlighted: null,
+
         progress: {
             bar: {
                 object: null,
@@ -1209,6 +1204,36 @@ var vars = {
                 object: null,
                 width: 640,
                 height: 50
+            }
+        },
+
+        glowObject: ()=> {
+            scene.plugins.get('rexGlowFilterPipeline').add(gameObject, { intensity: 1 });
+        },
+
+        grayScaleObject: ()=> {
+            scene.plugins.get('rexgrayscalepipelineplugin').add(gameObject, { intensity: 1 });
+        },
+
+        highlightObject: (_oName)=> {
+            // grab it
+            let gameObject = vars.phaserObject.quickGet(_oName);
+            // highlight it
+            scene.plugins.get('rexoutlinepipelineplugin').add(gameObject).setOutlineColor(0x000080).setThickness(6)
+            // remember it
+            vars.graphics.highlighted = _oName;
+        },
+
+        highlightedObjectReset: (_oName)=> {
+            let highlighted = vars.graphics.highlighted;
+            // check that this is the object that was highlighted
+            if (highlighted===_oName) {
+                vars.graphics.highlighted = null;
+                let gameObject = vars.phaserObject.quickGet(highlighted)
+                scene.plugins.get('rexoutlinepipelineplugin').remove(gameObject);
+            } else {
+                console.error(`Highlighted object sent to updater (${_oName}) is not the same as the h var (${highlighted})`);
+                debugger;
             }
         }
     },
@@ -1233,6 +1258,7 @@ var vars = {
             scene.input.on('gameobjectover', function (pointer, gameObject) {
                 // over functions
                 let oName = gameObject.name;
+                if (oName==='') { return false; }
                 if (oName.includes('opt')) {
                     if (oName.includes('Arrow')) {
                         if (!gameObject.getData('over')) {
@@ -1243,31 +1269,39 @@ var vars = {
                     }
                 }
 
-                if (oName==='') { return false; }
-                /* if (oName ==='volOptBG') {
+                if (oName === 'loadedButton') {
+                    vars.graphics.highlightObject(oName);
+                }
+
+                if (oName ==='volOptBG') {
                     if (scene.containers.volumeOptions!==undefined) {
                         if (scene.containers.volumeOptions.y===1060) {
                             vars.animate.showVolumeOptions(true);
-                        } else if (scene.containers.volumeOptions.y===880) {
-                            //vars.animate.showVolumeOptions(true);
                         }
                     }
-                } */
+                }
             });
 
             scene.input.on('gameobjectout', function (pointer, gameObject) {
                 if (gameObject.name==='gameBoard') { return false; }
-                /* if (gameObject.name === 'volOptBG') {
-                    if (scene.containers.volumeOptions!==undefined) {
+                let oName = gameObject.name;
+                if (oName==='') { return false; }
+
+                // VOLUME BAR -> EXIT
+                if (gameObject.name === 'volOptBG') {
+                    if (scene.containers.volumeOptions!==undefined  && pointer.y<880) {
                         if (scene.containers.volumeOptions.y===880) {
                             vars.animate.showVolumeOptions(false);
                         }
                     }
-                } */
+                }
+
+                if (oName === 'loadedButton') {
+                    vars.graphics.highlightedObjectReset(oName);
+                }
 
                 if (vars.animate.hovering===null) { return false; }
 
-                let oName = gameObject.name;
                 console.log(`Moved away from a button (${oName}) - destroying its tween`);
                 if (oName.includes('opt')) {
                     vars.animate.hovering.targets[0].setData('over', false).setScale(1);
@@ -1324,6 +1358,7 @@ var vars = {
                 // play menu ok sound
                 gameObject.disableInteractive();
                 vars.audio.playSound('menuOK');
+                vars.player.CPU=true;
 
                 vars.init(4);
                 vars.game.start();
@@ -1431,6 +1466,9 @@ var vars = {
     player: {
         betterLuck: true, // this changes the chances of the die to roll a one from 25% to 50% as a lot of 0's were being thrown
         current: 1,
+        CPU: false,
+        p1Face: 'male',
+        p2Face: 'female',
         zeroProtected: { player1: false, player2: false },
         pointsTotal: 0, diceComplete: 0,
         win: false, // either: false, 1 or 2
@@ -1668,19 +1706,19 @@ var vars = {
             volMute = scene.add.image(100, 100, 'optionsVolume').setFrame('volumeMute').setName('volumeMute').setInteractive();
             volDown = scene.add.image(250, 100, 'optionsVolume').setFrame('volumeDown').setName('volumeDown').setInteractive();
             volUp = scene.add.image(400, 100, 'optionsVolume').setFrame('volumeUp').setName('volumeUp').setInteractive();
-            
-            //volbarBG = scene.add.graphics().setName('gfx_volBarBG');
-            let w = 620; let h =  70;
+
+            let w = 620; let h = 70;
             let x = 550; let y = 100;
             volbarBG = scene.add.image(x, y, 'whitePixel').setTint(0x0000B2).setName('gfx_volBarBG').setScale(w,h).setOrigin(0,0.5);
 
-            w = 600; h =  50;
+            w = 600; h = 50;
+            w*=vars.audio.volume.phaser;
             volbar = scene.add.image(x+10, y, 'whitePixel').setTint(0x31D2F7).setName('gfx_volBar').setScale(w,h).setOrigin(0,0.5);
 
             // add everything to the container
             container.add([bg,volMute,volDown,volUp,volbarBG, volbar]);
             setTimeout( ()=> { vars.UI.showVolumeOptions(false); }, 1000)
-            
+
         },
 
         changePlayerFace: (_object)=> { // the object entering here is the arrow
@@ -1712,6 +1750,21 @@ var vars = {
                 return false;
             }
             frameName = imageArray[aPos];
+
+            if (player===1) {
+                vars.player.p1Face = frameName.includes('Male') ? 'male' : 'female';
+            } else if (player===2) {
+                switch (frameName) {
+                    case 'faceFemale': vars.player.p2Face='female'; vars.player.CPU=false; break;
+                    case 'faceMale':   vars.player.p2Face='male';   vars.player.CPU=false; break;
+                    case 'faceCPU':    vars.player.p2Face='female'; vars.player.CPU=true;  break;
+                    // faceCPU needs updating as we currently dont have a 2 tone version of the CPU yet. TODO
+                }
+            }
+
+            if (vars.DEBUG) {
+                vars.phaserObject.quickGet('playerDebugText').setText(`Player 1: ${vars.player.p1Face}\nPlayer 2: ${vars.player.p2Face} (CPU: ${vars.player.CPU.toString()})`);
+            }
 
             pImage.setFrame(frameName);
         },
