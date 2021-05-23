@@ -85,72 +85,64 @@ if (vars.player.AI===undefined) {
     vars.player.AI = {};
 }
 
-vars.player.AI.getMovesCPU = ()=> {
+vars.player.AI.getMovesCPU = (_movables)=> {
     console.clear();
-    let cpuAtStart = vars.player.counters.black.atStart.length; // currently forcing this to 2 for testing purposes
-    cpuAtStart+=2; // remember to remove
-
-    let useTempData = true;
+    // convert the movables into something we can use
     let boardPositions = Object.assign(vars.boardPositions); // this duplicates the board positions object so we can modify it
-    // FORCING TEST DATA
-    useTempData ? boardPositions = {
-        "wS": { "x": 1022, "y": 184, "takenByPlayer": 0, "counterName": "" },
-        "w1": { "x": 917,  "y": 230, "takenByPlayer": 0, "counterName": "" },
-        "w2": { "x": 759,  "y": 305, "takenByPlayer": 1, "counterName": "counterw_5" },
-        "w3": { "x": 577,  "y": 386, "takenByPlayer": 0, "counterName": "" },
-        "w4": { "x": 361,  "y": 486, "takenByPlayer": 1, "counterName": "counterw_6" },
-        "bS": { "x": 1320, "y": 337, "takenByPlayer": 0, "counterName": "" },
-        "b1": { "x": 1210, "y": 406, "takenByPlayer": 0, "counterName": "" },
-        "b2": { "x": 1047, "y": 517, "takenByPlayer": 2, "counterName": "counterb_3" },
-        "b3": { "x": 851,  "y": 642, "takenByPlayer": 0, "counterName": "" },
-        "b4": { "x": 603,  "y": 808, "takenByPlayer": 0, "counterName": "" },
-        "a1": { "x": 468,  "y": 626, "takenByPlayer": 2, "counterName": "counterb_6" },
-        "a2": { "x": 698,  "y": 501, "takenByPlayer": 0, "counterName": "" },
-        "a3": { "x": 886,  "y": 400, "takenByPlayer": 2, "counterName": "counterb_4" },
-        "a4": { "x": 1046, "y": 313, "takenByPlayer": 2, "counterName": "counterb_2" },
-        "a5": { "x": 1179, "y": 242, "takenByPlayer": 2, "counterName": "counterb_5" },
-        "a6": { "x": 1290, "y": 181, "takenByPlayer": 0, "counterName": "" },
-        "a7": { "x": 1390, "y": 127, "takenByPlayer": 0, "counterName": "" },
-        "a8": { "x": 1477, "y": 81,  "takenByPlayer": 1, "counterName": "counterw_4" },
-        "w5": { "x": 1352, "y": 35,  "takenByPlayer": 0, "counterName": "" },
-        "w6": { "x": 1260, "y": 76,  "takenByPlayer": 0, "counterName": "" },
-        "wE": { "x": 1152, "y": 127, "takenByPlayer": 0, "counterName": [] },
-        "b5": { "x": 1626, "y": 132, "takenByPlayer": 0, "counterName": "" },
-        "b6": { "x": 1547, "y": 187, "takenByPlayer": 0, "counterName": "" },
-        "bE": { "x": 1457, "y": 255, "takenByPlayer": 0, "counterName": [] }
-    } : null;
+    let movable = [];
+    let countersAtStart = vars.player.counters.black.atStart;
+    let cpuAtStart = countersAtStart.length; // was tested for, no longer needed? POSSIBLE TODO
+    _movables.forEach( (_vM)=> {
+        let cName = boardPositions[_vM[0]].counterName;
+        if (cName!='') {
+            let taking = _vM[2]===0 ? false : true;
+            movable.push([cName, _vM[1], taking]); 
+        } else {
+            // confirm that this is the starting position for black before doing anything else
+            if (_vM[0]==='bS') {
+                // in general, we should already have a floating counter by this points, so grab it
+                // yup, this is the start position for black. grab the next counter
+                vars.player.AI.popped = vars.game.startingCounter;
+                let counterName = vars.player.AI.popped; // this needs pushed back on to the pile if it isnt used! TODO coz its bathtime
+                // we have to add the data to this counter in case its selected (it could be done later, but due to the way the functions plays out, the required vars will no longer be available, so another var would be needed ie pointless)
+                let object = vars.phaserObject.quickGet(counterName);
+                object.setData({ moveFrom: _vM[0], moveTo: _vM[1] }); // OK So Ive only just noticed that 'board position' and 'move from' will never be different. There must be a reason for this. WILL BE FIXED FOR V.09ͤ α TODO
+                movable.push([ counterName, _vM[1], false ]);
+            }
+        }
+    })
 
-    // movable will be passed to this function by get movable counters
-    // ATM WERE FORCING TEST DATA
-    movable = [
-        ['counterb_3','a2',false],  // counter name, position its moving to, and whether its taking or not
-        ['counterb_5','b5',false],
-        ['counterb_2','a8',true],
-        ['counterb_4','a7',false]
-    ];
-
-    if (cpuAtStart>0 || useTempData) { // CPU has counters that are still to enter the board. Add a counter to the bS position
-        useTempData ? cName = 'counterb_1' : console.log(`Still to be added. Pop a counter from the atStart array`);
-        boardPositions.bS.counterName = cName;
-        movable.push([cName, 'b4', false]);
+    if (!Array.isArray(movable)) {
+        let msg = 'The array of movables is invalid.';
+        console.log(msg);
+        vars.UI.showErrorScreen(msg);
+        return false;
     }
 
-    paths = {
-        "white": [ "wS", "w1", "w2", "w3", "w4", "a1", "a2", "a3", "a4", "a5", "a6", "a7", "a8", "w5", "w6", "wE" ],
-        "black": [ "bS", "b1", "b2", "b3", "b4", "a1", "a2", "a3", "a4", "a5", "a6", "a7", "a8", "b5", "b6", "bE" ]
-    }
+    let paths = Object.assign(consts.playerPaths);
 
-    roll = 4
-    playerCounters = [
-        ['counterw_5','w2'],
-        ['counterw_6','w4'],
-        ['counterw_4','a7']
-    ];
+    let roll = vars.player.pointsTotal;
+    // get the white counters
+    let playerCounters = [];
+    paths.white.forEach((_wP)=> {
+        if (_wP!=='wS' && _wP!=='wE') {
+            let playerID = boardPositions[_wP].takenByPlayer;
+            let cName = boardPositions[_wP].counterName;
+            if (playerID===1 && cName!=='') {
+                playerCounters.push([cName, _wP]);
+            }
+        }
+    })
 
     console.log('Board Positions ...')
     console.table(boardPositions);
     console.log('---------------------------------------------------');
 
+/*
+   ◄██████████████████████████████►
+   ◄███► SET UP TAKING STRING ◄███►
+   ◄██████████████████████████████►
+*/
     // set up the taking string (used for assessing threat after moving to new position)
     let moveToStr = '';
     movable.forEach( (_m)=>{
@@ -175,82 +167,57 @@ vars.player.AI.getMovesCPU = ()=> {
 
 
 
+/*
+   ◄█████████████████████████████►
+   ◄███► CHECK RULES 2 AND 3 ◄███►
+   ◄█████████████████████████████►
+*/
     // TEST AGAINST THE RULES SHOWN ABOVE
     // we need to add a threat level based on how many enemy counters can take each counter (using pCAttack)
     playerCounters = detail ? console.table(playerCounters) : null; // <-- if detail is on, show it, otherwise nullify the var (the detail isnt really needed unless debuging)
     console.log('\n\nAssessing Threat Levels (rules 2 and 3)...');
     movable.forEach( (_m)=> {
-        let cName = _m[0];// let moveTo = _m[1]; let cTaking = _m[2];
-        if (_m[3]===undefined) { _m.push(0,[],[]); } // _m[3] = points, _m[4] = resons to move, _m[5] = reasons against moving
+        // let moveTo = _m[1]; let cTaking = _m[2];
+        if (_m[3]===undefined) { _m.push(0,[],[], false); } // _m[3] = points, _m[4] = resons to move, _m[5] = reasons against moving, _m[6] is optimal move?
 
         // RULE 2) Is the piece currently in danger?
-        if (pCAttack[cName]!==undefined) { // this counter can be taken
-            // from how many positions? if its only takable by 1 counter its gets a higher urge to move
-            let attackers = pCAttack[cName].length; // this will be 4,3,2 or 1
-            let points = ((5-attackers) * 0.25) * 40;
+        let rule2 = vars.player.AI.checkRule(2, _m, null, pCAttack);
+        _m = rule2;
 
-            // maximum points will be as follows
-            // 4 counters attacking this position -> 10 points
-            // 3    "         "       "     "     -> 20   "
-            // 2    "         "       "     "     -> 30   "
-            // 1    "         "       "     "     -> 40   "
-            _m[3] += points;
-            _m[4].push(`Counter can be taken by ${attackers} player counters. Points +${points}`);
-        }
-        
         // RULE 3) If this counter was moved, determine threat level of new position
         // check if the moveTo is in the pc blocks
-        let moveTo = _m[1];
-        if (pCBlocks[moveTo] !== undefined) {
-            let attackers = pCBlocks[moveTo].length;
-            let penalty = attackers * 10;
-
-            // deduct those points from the current total
-            _m[3] -= penalty;
-            _m[5].push(`If this counter moves it will be attackable by ${attackers}. Points -${penalty}`);
-        } else {
-            _m[3] += 10;
-            _m[4].push(`If this counter moves it will be safe from attackers. Points +10`);
-        }
+        let rule3 = vars.player.AI.checkRule(3, _m, null, null, pCBlocks);
+        _m = rule3;
     })
 
+/*
+   ◄████████████████████████████████►
+   ◄███► CHECK RULES 1, 4 AND 5 ◄███►
+   ◄████████████████████████████████►
+*/
     console.log('\n\nAssessing Rules 1, 4 & 5...');
-    let optimalMoveFound = false;
-    movable.forEach( (_m)=>{
+    // as rule 1 contains the check for optimal move, we can ignore everything after finding one - note it might be better to first check which free square were moving to possible TODO
+    // more info: as an example, if both b4 and a4 can be taken then a4 should probably be choosen over any other position as its on the attack lane AND is untakable
+    // so, main priority is a4 as b4 could be taken on the next free throw. If we take b4, the next throw might not land the other counter on a4 (hence a4 is actually safer even though b4 is untakable as a4 is firther up the board and closer to home)
+    // this means ignoring the optimal move at this point. waiting for all counters to come back with impulse and checking for multiple free shots. if theres only one, fine. if there are multiple (yes, even including b6, probably)
+    // MAJOR TODO
+    movable.forEach( (_m)=>{ // hence this has been changed to foreach (from .some) and the return has been removed
         let score = 0;
-        let counterName = _m[0]; let movingTo = _m[1];
 
         // RULE 1) Are they moving to a free shot?
-        if (movingTo==='a4' || movingTo==='b6' || movingTo==='b4') { // free shot square
-            let maxScore = 50; let bonus = 20;
-            switch (movingTo) {
-                case 'a4': // untakable free shot square - highest priority - this is our move!
-                    score+=maxScore+bonus;
-                    _m[4].push(`Counter would be moving to a4. Points +70}`);
-                    optimalMoveFound=true;
-                    break;
-                case 'b4': case 'b6': // free shot square - medium priority?
-                    score+=maxScore;
-                    _m[4].push(`Counter would be moving to b4 or b6 (free shot square). Points +50}`);
-                    break;
-            }
-        }
-
+        let rule1 = vars.player.AI.checkRule(1, _m, score);
+        _m = rule1[0]; score = rule1[1]; // *1 as the score is built in, I may just change these rules to return the score embeded in _m POSSIBLE TODO
+        rule1=null;
 
 
         // RULE 4) Is this counter taking on move?
-        let rule4 = vars.player.AI.checkRule(4, _m, score);
-        if (rule4===false) {
-            // error returned
-            return false;
-        }
+        let rule4 = vars.player.AI.checkRule(4, _m, score); // same here *1
         _m = rule4[0]; score = rule4[1];
         rule4=null;
 
 
-
         // RULE 5) moveTo is a1-a3, a5-a8, b1-b3, b5, b6
-        let rule5 = vars.player.AI.checkRule(5, _m, score);
+        let rule5 = vars.player.AI.checkRule(5, _m, score); // same here *1
         _m = rule5[0]; score = rule5[1];
         rule5=null;
 
@@ -263,7 +230,7 @@ vars.player.AI.getMovesCPU = ()=> {
     // figure out best move
     let bestMove = vars.player.AI.determineBestMove(movable);
     console.log(`Best move would be by ${bestMove}`);
-    debugger;
+    return bestMove;
 
 }
 
@@ -313,18 +280,58 @@ vars.player.AI.blockAttacks = (playerCounters, paths, boardPositions, _moveToStr
     return { pCAttack: pCAttack, pCBlocks: pCBlocks }
 }
 
-
-vars.player.AI.checkRule = (ruleNumber, movableData, score)=> {
+vars.player.AI.checkRule = (ruleNumber, movableData, score, pCAttack=null, pCBlocks=null)=> {
     let _m = movableData;
+    let cName = _m[0];
+    let movingTo = _m[1];
     switch (ruleNumber) {
         case 1:
-            ;
+            // RULE 1) Are they moving to a free shot?
+            if (movingTo==='a4' || movingTo==='b6' || movingTo==='b4') { // free shot square
+                _m[6]=true;
+                let maxScore = 50; let bonus = 30;
+                switch (movingTo) {
+                    case 'a4': // untakable free shot square - highest priority - this is our move!
+                        score+=maxScore+bonus;
+                        _m[4].push(`Counter would be moving to a4. Points +80}`);
+                        break;
+                    case 'b4': case 'b6': // free shot square - medium-high priority (NOTE: b4 should only be taken when a4 isnt available)
+                        score+=maxScore+(bonus/2);
+                        _m[4].push(`Counter would be moving to b4 or b6 (free shot square). Points +65}`);
+                        break;
+                }
+            }
+            return [_m, score];
             break;
         case 2:
-            ;
+            // RULE 2) Is the piece currently in danger?
+            if (pCAttack[cName]!==undefined) { // this counter can be taken
+                // from how many positions? if its only takable by 1 counter its gets a higher urge to move
+                let attackers = pCAttack[cName].length; // this will be 4,3,2 or 1
+                let points = ((5-attackers) * 0.25) * 40;
+
+                // maximum points will be as follows
+                // 4 counters attacking this position -> 10 points
+                // 3    "         "       "     "     -> 20   "
+                // 2    "         "       "     "     -> 30   "
+                // 1    "         "       "     "     -> 40   "
+                _m[3] += points;
+                _m[4].push(`Counter can be taken by ${attackers} player counter(s). Points +${points}`);
+            }
+            return _m;
             break;
         case 3:
-            ;
+            if (pCBlocks[movingTo] !== undefined) {
+                let attackers = pCBlocks[movingTo].length;
+                let penalty = attackers * 10;
+                // deduct those points from the current total
+                _m[3] -= penalty;
+                _m[5].push(`If this counter moves it will be attackable by ${attackers}. Points -${penalty}`);
+            } else {
+                _m[3] += 10;
+                _m[4].push(`If this counter moves it will be safe from attackers. Points +10`);
+            }
+            return _m;
             break;
         case 4:
             // RULE 4) Is this counter taking on move?
@@ -334,7 +341,6 @@ vars.player.AI.checkRule = (ruleNumber, movableData, score)=> {
             break;
         case 5:
             // RULE 5) moveTo is a1-a3, a5-a8, b1-b3, b5, b6
-            let movingTo = _m[1];
             if (movingTo==='a1' || movingTo==='a2' || movingTo==='a3') {
                 score-=10;
                 _m[5].push(`Move is to a1, a2 or a3 (pretty dangerous board positions). Points -10`);
@@ -367,7 +373,6 @@ vars.player.AI.checkRule = (ruleNumber, movableData, score)=> {
     }
 }
 
-
 vars.player.AI.determineBestMove = (_moveList)=> {
     let bestMoves = [];
     let highestImpulse = -Infinity;
@@ -381,11 +386,11 @@ vars.player.AI.determineBestMove = (_moveList)=> {
             highestImpulse = _m[3];
         }
     })
-    console.log(`Highest impulse: ${highestImpulse}`);
-    console.table(bestMoves);
+    vars.DEBUG ? console.log(`Highest impulse: ${highestImpulse}`) : null;
+    vars.DEBUG ? console.table(bestMoves) : null;
 
     if (bestMoves.length>1) { // there were multiple "best" moves. Choose one based on positives and negatives
-        console.log(`OK, there are still more than 1 "best" moves. Testing the good against the bad`);
+        console.log(`\nOK, there are still more than 1 "best" moves. Testing the good against the bad`);
         let bestMove = -Infinity;
         let averages = []
         bestMoves.forEach( (_b)=> {
@@ -402,16 +407,62 @@ vars.player.AI.determineBestMove = (_moveList)=> {
 
         if (averages.length===1) { // only one "real" best move
             let counterName = averages[0][1];
-            console.log(`  .. after testing good v bad, only 1 move is "best". Returning ${counterName}`);
+            vars.DEBUG ? console.log(`  .. after testing good v bad, only 1 move is "best". Returning ${counterName}`) : null;
             return averages[0][1];
         } else { // okay... there are still multiple options, we simply randomise them and return one
             let selected = shuffle(averages)[0][1];
-            console.log(`  .. even after testing there are still multiple "best" moves. At this point either will do.\n  .. returning ${selected}`);
+            vars.DEBUG ? console.log(`  .. even after testing there are still multiple "best" moves. At this point either will do.\n  .. returning ${selected}`) : null;
             return selected;
         }
 
     } else { // only one best move found
-        console.log(`Only one best move was found. Returning ${bestMoves[0][0]}`);
+        vars.DEBUG ? console.log(`\n\nOnly one best move was found. Returning ${bestMoves[0][0]}`) : null;
         return bestMoves[0][0]; // returns the counter name for the best move
     }
+}
+
+vars.player.AI.popped = null;
+
+
+
+/*
+   ◄████████████████████████████████►
+   ◄███► ENTRY POINT FOR THE AI ◄███►
+   ◄████████████████████████████████►
+*/
+vars.player.AI.getBestMove = (_movables)=> {
+    // OK, so we have already bounced the counters that are movable
+    let counterName = vars.player.AI.getMovesCPU(_movables); // will return counterb_x or false
+    console.log(`The selected counter is ${counterName}`);
+    if (!counterName || !counterName.includes('counterb_')) {
+        let msg = `The counter name doesnt appear to be valid`;
+        vars.UI.showErrorScreen(`ERROR:\n\n${msg}\nCounter Name: ${counterName}\n\nThis needs fixing and is unrecoverable.\n\nIf the console is open, execution will stop.`);
+        console.error(msg);
+        return false;
+    }
+
+    // if we get this far, a valid counter was found
+    // stop all the counter bounces etc and move the counter.
+    // As PCs are extremely fast these days, Ive put in a 1 second pause before all that is done, to simulate "thinking"
+    // otherwise the dice would roll and the AI would know (basically) instantly what the best move is.
+    // POSSIBLE TODO - CHANGE THE 1 SECOND TIMEOUT TO SOMETHING MORE SUBSTANTIAL?
+    setTimeout( ()=> {
+        if (vars.player.AI.popped!==null && counterName!==vars.player.AI.popped) {
+            // we arent moving the starting counter, push it back on to the atStart
+            let popped = vars.player.AI.popped;
+            vars.player.counters.black.atStart.push(popped);
+            let object = vars.phaserObject.quickGet(popped);
+            object.setData({ moveFrom: '', moveTo: '', boardPosition: '' }); // seriously, my next iteration of this game is gonna use classes.. holy moo...
+            vars.player.AI.popped=null;
+            vars.game.startingCounter = '';
+            // we also need to hide the counter as cTNP doesnt reset it for some reason (honestly not sure if its meant to, might be done in an earlier function? WEIRD TODO
+            object.setAlpha(0);
+        } else {
+            // we are moving the starting counter, reset the vars
+            vars.player.AI.popped=null;
+            vars.game.startingCounter = '';
+        }
+        let cObj = vars.phaserObject.quickGet(counterName);
+        vars.animate.counterToNewPosition(cObj);
+    },1000)
 }

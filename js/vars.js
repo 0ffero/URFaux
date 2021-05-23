@@ -1,7 +1,7 @@
 var vars = {
     DEBUG: false,
 
-    version: 0.93,
+    version: 0.965,
 
     clamp: Phaser.Math.Clamp,
 
@@ -908,7 +908,18 @@ var vars = {
                             return false;
                         }
 
-                        // we have valid moves, enable counters
+                        // we have valid moves
+                        if (vars.player.current===2 && vars.player.CPU) {   // is it the computers shot?
+                            vars.player.AI.getBestMove(validMoves);                   // this deals with everything
+                                                                            // ( ie it: figures out best counter to move, stops the bouncing counters, moves the counter and moves on to the next player)
+                            return false;                                   // so we just return false here
+                        }
+
+
+
+                        // if we get to this point valid moves were found and it isnt the CPU's shot
+
+                        // player isnt CPU, enable counters
                         vars.input.countersEnable(true);
                         // bounce the counters that can move (done in gV.getValidMoves)
                     }
@@ -1165,7 +1176,7 @@ var vars = {
             console.log(`Taking ${_objectName}`);
             // we need a few variables here as we are gonna reset most of them
             let bPs = vars.boardPositions;
-            
+
             let takenCounterObject = vars.phaserObject.quickGet(_objectName);
             if (takenCounterObject===false) {
                 console.error(`Object was NOT found!`);
@@ -1179,7 +1190,7 @@ var vars = {
             bPs[bP].takenByPlayer = vars.player.getCurrent()[0];
 
             // reset the data for this object
-            let cStartPos = bPs[`${colour}S`];
+            //let cStartPos = bPs[`${colour}S`];
             //let x = cStartPos.x; let y = cStartPos.y;
             // animate the counter back to its start position
             vars.animate.counterToStart(takenCounterObject);
@@ -1246,7 +1257,6 @@ var vars = {
             vars.DEBUG ? vars.input.enableCombos() : null;
             scene.input.on('gameobjectdown', function (pointer, gameObject) {
                 let iV = vars.input;
-                console.log(`Pointer position: x: ${~~(pointer.position.x+0.5)}, y: ${~~(pointer.position.y+0.5)}`);
                 if (iV.enabled===false) {
                     console.log('Input is currently disabled.');
                     return false;
@@ -1358,7 +1368,6 @@ var vars = {
                 // play menu ok sound
                 gameObject.disableInteractive();
                 vars.audio.playSound('menuOK');
-                vars.player.CPU=true;
 
                 vars.init(4);
                 vars.game.start();
@@ -1387,7 +1396,7 @@ var vars = {
                         _c.setData({ moveTo: '', moveFrom: '' })
                         _c.disableInteractive();
                     } else {
-                        _cC === only ?  _c.setInteractive() : null; // only activate the current players counters
+                        _cC === only ? _c.setInteractive() : null; // only activate the current players counters
                     }
                 });
                 if (swap===true) { console.groupEnd(); }
@@ -1587,6 +1596,15 @@ var vars = {
             // the volume options are built in stage 2 from inside vars.containers
         },
 
+        initErrorScreen: ()=> {
+            let g = scene.groups.errorScreen;
+            let depth = consts.depths.error;
+            let eBG   = scene.add.image(vars.canvas.cX, vars.canvas.cY, 'whitePixel').setScale(vars.canvas.width, vars.canvas.height).setTint(0x800000).setName('errorBG').setDepth(depth-1).setAlpha(0);
+            let title = scene.add.text(vars.canvas.cX, 150, 'Fatal Error', { fontSize: '36px', fontStyle: 'bold', stroke: '#000', strokeThickness: 5 }).setDepth(consts.depths.error).setOrigin(0.5).setName('errorTextTitle').setAlpha(0);
+            let msg   = scene.add.text(vars.canvas.cX, vars.canvas.cY, 'Error message will be in here.', { fontSize: '28px', stroke: '#000', strokeThickness: 5 }).setDepth(consts.depths.error).setOrigin(0.5).setName('errorTextMessage').setAlpha(0);
+            g.addMultiple([eBG,title,msg]);
+        },
+
         initLogo: ()=> {
             scene.textures.once('addtexture', function () {
                 let logo = scene.add.image(vars.canvas.width-10, vars.canvas.height-10, 'logo').setDepth(consts.depths.debug).setOrigin(1,1).setScale(0.66).setAlpha(0);
@@ -1784,6 +1802,15 @@ var vars = {
             let newText='';
             if (oldText==='') { newText = 'Please roll the dice'; }
             txtObj.setText(oldText).setData('old', newText);
+        },
+
+        showErrorScreen: (_msg='')=> {
+            if (_msg.length===0) { _msg = 'ERROR:\n\nNo error message was passed.'; }
+            let g = scene.groups.errorScreen;
+            g.children.each( (_o)=> {
+                if (_o.name==='errorTextMessage') { _o.setText(_msg).setOrigin(0.5); }
+                _o.setAlpha(1);
+            })
         },
 
         showMessage: (_message, _duration=2000, _showPlayer=false)=>{

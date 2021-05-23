@@ -43,7 +43,8 @@ const consts = {
     },
 
     depths: {
-        debug: 254,
+        debug: 250,
+        error: 255, // basically if an error screen is shown, its on top of everything else for obvious reasons
         sand: 1,
         countersComplete: 2, // depth of counters when they get to their finish position
         board: 10,

@@ -15,6 +15,7 @@ vars.init = (stage=1)=> { // ENTRY POINT IS HERE
         v.camera.init();
         v.input.init();
         v.particles.init();
+        vars.UI.initErrorScreen();
     }
 
     if (stage===3) {
@@ -167,6 +168,7 @@ vars.groups = {
         scene.groups.whiteCounters = scene.add.group().setName('whiteCountersGroup');
         scene.groups.blackCounters = scene.add.group().setName('blackCountersGroup');
 
+        scene.groups.errorScreen = scene.add.group().setName('errorScreen');
         scene.groups.debug = scene.add.group().setName('debugGroup');
     }
 }
