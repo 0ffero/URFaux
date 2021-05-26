@@ -1,7 +1,7 @@
 var vars = {
     DEBUG: false,
 
-    version: 0.965,
+    version: 0.97,
 
     clamp: Phaser.Math.Clamp,
 
@@ -602,7 +602,7 @@ var vars = {
                 // alpha to 1
                 scene.tweens.add({ targets: container, duration: duration/2, alpha: 1, ease: 'Quad.easeIn' })
             } else {
-                scene.tweens.add({ targets: container, y: vars.canvas.height-20, duration: duration, ease: 'Quad.easeIn', onComplete: (_t,_o)=> { _o[0].setAlpha(0.7); } })
+                scene.tweens.add({ targets: container, y: vars.canvas.height-10, duration: duration, ease: 'Quad.easeIn', onComplete: (_t,_o)=> { _o[0].setAlpha(0.7); } })
             }
         }
     },
@@ -630,6 +630,12 @@ var vars = {
             // as howler deals with streams which are quieter than the sound effects (my bad) we need a multiplier so we can chane the volume
             aV.volume.multiplier = aV.volume.howler/aV.volume.phaser;
             console.log(`  .. 🔊 Initialising volume multiplier (set to ${~~(aV.volume.multiplier*1000)/1000}).`);
+
+            if (vars.DEBUG) {
+                // drop the volume to base (it gets annoying after a while... is this a problem? POSSIBLE TODO)
+                aV.volume.phaser = 0.1;
+                aV.volume.howler = aV.volume.phaser * aV.volume.multiplier;
+            }
         },
 
         loadStream: ()=> {
@@ -1285,7 +1291,7 @@ var vars = {
 
                 if (oName ==='volOptBG') {
                     if (scene.containers.volumeOptions!==undefined) {
-                        if (scene.containers.volumeOptions.y===1060) {
+                        if (scene.containers.volumeOptions.y===vars.canvas.height-10) {
                             vars.animate.showVolumeOptions(true);
                         }
                     }
@@ -1415,12 +1421,18 @@ var vars = {
 
         enableCombos: ()=> {
             let sIK = scene.input.keyboard;
+
+            // dice force
             sIK.createCombo('force4',   { resetOnMatch: true });
             sIK.createCombo('force3',   { resetOnMatch: true });
             sIK.createCombo('force2',   { resetOnMatch: true });
             sIK.createCombo('force1',   { resetOnMatch: true });
             sIK.createCombo('force0',   { resetOnMatch: true });
             sIK.createCombo('forceOff', { resetOnMatch: true });
+
+            // player force
+            sIK.createCombo('p1', { resetOnMatch: true });
+            sIK.createCombo('p2', { resetOnMatch: true });
 
             sIK.on('keycombomatch', function (event) {
                 let comboName = '';
@@ -1432,6 +1444,9 @@ var vars = {
                     vars.force = force === 'OFF' ?  -1 : ~~(force);
                     console.log(`Force has been set to ${force}`);
                     quickGet('dbgTextForce').setText(`Force: ${force}`);
+                } else if (comboName==='P1' || comboName==='P2') {
+                    vars.player.current = ~~(comboName[1]);
+                    quickGet('playerText').setText(`Player ${vars.player.current}`)
                 }
             })
         },
@@ -1848,7 +1863,7 @@ var vars = {
         },
 
         showVolumeOptions: (_show=true)=> {
-            if (scene.containers.volumeOptions.y===1060) {
+            if (scene.containers.volumeOptions.y===vars.canvas.height-10) {
                 _show = true;
             } else {
                 _show = false;
