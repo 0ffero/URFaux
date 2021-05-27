@@ -1,11 +1,14 @@
 vars.debugFN = {
     init: (totalTime)=> {
-        let dbgBG = scene.add.image(vars.canvas.width, 0, 'whitePixel').setName('dbgBG').setDepth(consts.depths.debug-1).setScale(300,250).setAlpha(0.33).setOrigin(1,0);
+        let dbgBG = scene.add.image(vars.canvas.width, 0, 'whitePixel').setName('dbgBG').setDepth(consts.depths.debug-1).setScale(300,450).setAlpha(0.33).setOrigin(1,0);
+
         let dbgTxt = scene.add.text(vars.canvas.width, 0, `DEBUG ON. Game version: ${vars.version}\nInitialisation took ${totalTime}ms`).setAlign('right').setName('debugText').setOrigin(1,0).setColor('#0').setDepth(consts.depths.debug);
         let dbgXY = scene.add.text(vars.canvas.width, 190, `x: -1, y: -1`).setAlign('right').setName('debugXY').setOrigin(1,0).setColor('#0').setDepth(consts.depths.debug);
         let dbgForce = scene.add.text(vars.canvas.width, 150, `Force: Disabled`).setAlign('right').setName('dbgTextForce').setOrigin(1,0).setColor('#0').setFontSize(24).setFontStyle('bold').setDepth(consts.depths.debug);
         let playerDBG = scene.add.text(vars.canvas.width, 210, `Player 1: ${vars.player.p1Face}\nPlayer 2: ${vars.player.p2Face} (CPU: ${vars.player.CPU.toString()})`).setAlign('right').setName('playerDebugText').setOrigin(1,0).setColor('#0').setDepth(consts.depths.debug);
-        scene.groups.debug.addMultiple([dbgXY, dbgTxt, dbgForce, dbgBG, playerDBG]);
+        let overDBG = scene.add.text(vars.canvas.width, 280, `Over: N/A`).setAlign('right').setName('overDebugText').setOrigin(1,0).setColor('#0').setDepth(consts.depths.debug);
+        let overDataDBG = scene.add.text(vars.canvas.width, 300, `Data: N/A`).setAlign('right').setName('overDataDebugText').setOrigin(1,0).setColor('#0').setDepth(consts.depths.debug);
+        scene.groups.debug.addMultiple([dbgXY, dbgTxt, dbgForce, dbgBG, playerDBG, overDBG, overDataDBG]);
         vars.debugFN.showDebugBoard();
 
         quickGet = vars.phaserObject.quickGet;
@@ -26,7 +29,7 @@ vars.debugFN = {
             cO.setData('boardPosition',_pos);
             let x = bPs[_pos].x; let y = bPs[_pos].y;
             let frame = _pos[0]==='a' ? `b${_pos}` : _pos;
-            cO.setAlpha(1).setPosition(x,y).setFrame(frame).setData({ x: x, y: y });
+            cO.setAlpha(1).setPosition(x,y).setFrame(frame, true, true).setData({ x: x, y: y });
             console.log(`  > Added black counter to position ${_pos}`);
         }); // <-- this semi-colon is needed or else the white counters will fail o.0 (Im missing something, but cant figure out what)
         // im assuming the interp is seeing something like
@@ -41,7 +44,7 @@ vars.debugFN = {
             aO.setData('boardPosition',_a);
             let x = bPs[_a].x; let y = bPs[_a].y;
             let frame = _a[0]==='a' ? `w${_a}` : _a;
-            aO.setAlpha(1).setPosition(x,y).setFrame(frame).setData({ x: x, y: y });
+            aO.setAlpha(1).setPosition(x,y).setFrame(frame, true, true).setData({ x: x, y: y });
             console.log(`  > Added white counter to position ${_a}`);
         })
         console.groupEnd();

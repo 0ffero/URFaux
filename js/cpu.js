@@ -292,7 +292,7 @@ vars.player.AI.getMovesCPU = (_movables)=> {
     let boardPositions = Object.assign(vars.boardPositions); // this duplicates the board positions object so we can modify it
     let movable = [];
     let countersAtStart = vars.player.counters.black.atStart;
-    let cpuAtStart = countersAtStart.length; // was tested for, no longer needed? POSSIBLE TODO
+    let cpuAtStart = countersAtStart.length; // "was" tested for, no longer needed? POSSIBLE TODO
     _movables.forEach( (_vM)=> {
         let cName = boardPositions[_vM[0]].counterName;
         if (cName!='') {

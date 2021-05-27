@@ -1,7 +1,7 @@
 var vars = {
     DEBUG: false,
 
-    version: 0.97,
+    version: 0.972,
 
     clamp: Phaser.Math.Clamp,
 
@@ -500,7 +500,7 @@ var vars = {
             //vars.phaserObject.quickGet('shield_2').setVisible(_show);
         },
 
-        showMessage: (_msg, _dur)=> { // variables have already been confirmed by this point
+        showMessage: (_msg, _dur, _showFace=false)=> { // variables have already been confirmed by this point
             let delay = vars.animate.popupWait;
             vars.animate.popupWait=0;
             vars.DEBUG ? console.log(`Generating pop up`) : null;
@@ -529,6 +529,10 @@ var vars = {
                 yoyo: yoyo, hold: hold, duration: duration*2, delay: delay,
                 ease: 'Power1'
             })
+
+            if (_showFace) {
+                vars.animate.showPlayerFace(yoyo, hold, duration, delay);
+            }
         },
 
         showOptions: (_show=true)=> {
@@ -556,7 +560,7 @@ var vars = {
             })
         },
 
-        showPlayerFace: ()=> {
+        showPlayerFace: (_yoyo, _hold, _duration, _delay)=> {
             let qg = vars.phaserObject.quickGet;
             let cP = vars.player.current;
             let playerFace = qg(`opt_p${cP}i`);
@@ -567,15 +571,13 @@ var vars = {
                 playerFace.setPosition(vars.canvas.cX, 0+200).setDepth(depth);
             }
 
-            // we need the duration of the showMessage so we can fade in and out the face at the same time as the message is shown
-            let duration = 1000; // test data only <-- this needs to be figured out at run time. TODO
             scene.tweens.add({
                 targets: playerFace,
                 alpha: 1,
-                yoyo: true,
-                duration: duration*0.33,
-                hold: duration*0.75,
-                delay: duration*0.5
+                yoyo: _yoyo,
+                duration: _duration*2,
+                hold: _hold,
+                delay: _delay
             })
         },
 
@@ -685,7 +687,7 @@ var vars = {
         },
 
         rollDice: ()=> {
-            vars.DEBUG ? console.log(`🎵 🎲 Selecing random dice roll audio`) : null;
+            vars.DEBUG ? console.log(`🎵 🎲 Selecting random dice roll audio`) : null;
             vars.audio.playSound(shuffle(vars.audio.dice)[0]);
         },
 
@@ -1274,7 +1276,32 @@ var vars = {
             scene.input.on('gameobjectover', function (pointer, gameObject) {
                 // over functions
                 let oName = gameObject.name;
-                if (oName==='') { return false; }
+                if (oName==='') { 
+                    // we also have to empty out the new debug vars
+                    if (vars.DEBUG) {
+                        let qg = vars.phaserObject.quickGet;
+                        quickGet('overDebugText').setText('Over: N/A');
+                        quickGet('overDataDebugText').setText('Data: N/A');
+                    }
+                    return false;
+                }
+                // DEBUG STUFF
+                if (vars.DEBUG) {
+                    quickGet('overDebugText').setText(`Over: ${oName}`);
+                    let msg = '';
+                    if (gameObject.data!==null) {
+                        let textArray = [];
+                        let list = gameObject.data.list;
+                        for (let a in list) {
+                            textArray.push(`\n${a}: ${list[a]==='' ? 'EMPTY' : list[a]}`);
+                        }
+                        msg = `DATA:\n${textArray}`;
+                    } else {
+                        msg = 'DATA: N/A'
+                    }
+                    quickGet('overDataDebugText').setText(msg);
+                }
+
                 if (oName.includes('opt')) {
                     if (oName.includes('Arrow')) {
                         if (!gameObject.getData('over')) {
@@ -1392,17 +1419,20 @@ var vars = {
         countersEnable: (_enable=true)=> {
             let oldI = -1;
             let swap;
-            let only = vars.player.current === 1 ? 'whiteCounters' : 'blackCounters';
+            let only = vars.player.current === 1 ? 'whiteCounters' : 'blackCounters'; // only needed when enabling counters
             let doingText = _enable===true ? 'Enabling ' : 'Disabling ';
             ['blackCounters','whiteCounters'].forEach( (_cC, i)=> {
                 swap = false;
                 if (oldI!==i) { oldI=i; console.groupCollapsed(doingText + _cC); swap=true; }
                 scene.groups[_cC].children.each( (_c)=> {
                     if (_enable===false) { // we are disabling the counters. Clear their data
-                        _c.setData({ moveTo: '', moveFrom: '' })
+                        _c.setData({ moveTo: '', moveFrom: '', taking: '' })
                         _c.disableInteractive();
                     } else {
-                        _cC === only ? _c.setInteractive() : null; // only activate the current players counters
+                        if (_cC === only) {
+                            _c.setInteractive(); // enable the counter
+                            _c.input.hitArea.setSize(_c.width, _c.height); // we also need to update the hit area as is isnt updated automatically (coz Phaser)
+                        } 
                     }
                 });
                 if (swap===true) { console.groupEnd(); }
@@ -1554,14 +1584,14 @@ var vars = {
             if (_anotherShot===false || _anotherShot==='skip') {
                 // update the current player and text
                 pV.current = pV.current === 1 ? 2 : 1;
-                if (_anotherShot!=='skip') { msg = `Player ${pV.current}\n\nPlease roll the dice`; }
+                if (_anotherShot!=='skip') { msg = `Roll the dice`; }
                 vars.UI.playerUpdate(pV.current);
                 vars.audio.sentenceBuild('proll');
 
                 // change the player face
                 vars.animate.changeFace();
             } else {
-                msg = `Player ${pV.current}\n\nYou landed on a free shot sqaure\n\nPlease roll the dice again`;
+                msg = `You landed on a free shot\n\nRoll the dice`;
                 vars.audio.sentenceBuild('rollagain');
             }
 
@@ -1682,8 +1712,8 @@ var vars = {
             let startPosWhite = [ bPs.wS.x, bPs.wS.y];
             let startPosBlack = [ bPs.bS.x, bPs.bS.y];
             [1,2,3,4,5,6].forEach( (_c)=> {
-                let whiteCounter = scene.add.image(startPosWhite[0], startPosWhite[1],'counters').setFrame('wS').setDepth(counterDepth).setAlpha(0).setName(`counterw_${_c}`).setData({moveFrom: '', moveTo: '', x: startPosWhite[0], y: startPosWhite[1], boardPosition: '', taking: '' }).setInteractive();
-                let blackCounter = scene.add.image(startPosBlack[0], startPosBlack[1],'counters').setFrame('bS').setDepth(counterDepth).setAlpha(0).setName(`counterb_${_c}`).setData({moveFrom: '', moveTo: '', x: startPosBlack[0], y: startPosBlack[1], boardPosition: '', taking: '' }).setInteractive();
+                let whiteCounter = scene.add.sprite(startPosWhite[0], startPosWhite[1],'counters').setFrame('wS').setDepth(counterDepth).setAlpha(0).setName(`counterw_${_c}`).setData({moveFrom: '', moveTo: '', x: startPosWhite[0], y: startPosWhite[1], boardPosition: '', taking: '' }).setInteractive();
+                let blackCounter = scene.add.sprite(startPosBlack[0], startPosBlack[1],'counters').setFrame('bS').setDepth(counterDepth).setAlpha(0).setName(`counterb_${_c}`).setData({moveFrom: '', moveTo: '', x: startPosBlack[0], y: startPosBlack[1], boardPosition: '', taking: '' }).setInteractive();
                 scene.groups.whiteCounters.add(whiteCounter);
                 scene.groups.blackCounters.add(blackCounter);
             })
@@ -1834,9 +1864,7 @@ var vars = {
                 return false;
             }
 
-            vars.animate.showMessage(_message, _duration);
-
-            _showPlayer ? vars.animate.showPlayerFace() : null;
+            vars.animate.showMessage(_message, _duration, _showPlayer);
         },
 
         showPlayerText: ()=> {
