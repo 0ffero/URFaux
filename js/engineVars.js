@@ -95,10 +95,6 @@ vars.files = {
         fV.images.init();
     },
 
-    initNext: ()=> {
-
-    },
-
     audio: {
         init: ()=> {
             let o = '.ogg';
@@ -134,19 +130,19 @@ vars.files = {
 
     images: {
         init: ()=> {
-            scene.load.image('sandBG',       'images/sand.jpg');
-            scene.load.image('boardBG',      'images/board.png');
-            scene.load.atlas('counters',     'images/counters.png',      'images/counters.json');
-            scene.load.atlas('dice',         'images/dice.png',          'images/dice.json');
-            scene.load.atlas('options',      'images/optionImages.png',  'images/optionImages.json');
-            scene.load.atlas('optionsVolume','images/optionsVolume.png', 'images/optionsVolume.json');
-            scene.load.atlas('playerFaces',  'images/playerFaces.png',   'images/playerFaces.json');
-            scene.load.atlas('playerFacesF', 'images/playerFacesF.png',  'images/playerFacesF.json');
-            scene.load.image('playButtonBG', 'images/playButtonBG.jpg');
-            scene.load.image('loadedBG',     'images/loadedScreen.jpg');
-            scene.load.image('loadedButton', 'images/loaded.png');
-            scene.load.image('shielded',     'images/shielded.png');
-            scene.load.image('whitePixel',   'images/whitePixel.png');
+            scene.load.image('sandBG',         'images/sand.jpg');
+            scene.load.image('boardBG',        'images/board.png');
+            scene.load.atlas('counters',       'images/counters.png',      'images/counters.json');
+            scene.load.atlas('dice',           'images/dice.png',          'images/dice.json');
+            scene.load.atlas('options',        'images/optionImages.png',  'images/optionImages.json');
+            scene.load.atlas('optionsVolume',  'images/optionsVolume.png', 'images/optionsVolume.json');
+            scene.load.atlas('playerFaces',    'images/playerFaces.png',   'images/playerFaces.json');
+            scene.load.atlas('playerFacesF',   'images/playerFacesF.png',  'images/playerFacesF.json');
+            scene.load.image('playButtonBG',   'images/playButtonBG.jpg');
+            scene.load.image('loadedBG',       'images/loadedScreen.jpg');
+            scene.load.image('loadedButton',   'images/loaded.png');
+            scene.load.image('shielded',       'images/shielded.png');
+            scene.load.image('whitePixel',     'images/whitePixel.png');
 
             // particles
             scene.load.image('sandParticleImage', 'particles/whiteSmall.png');
@@ -208,5 +204,36 @@ vars.phaserObject = {
     quickGet: (_oN=null)=> {
         if (_oN===null) { return false; }
         return scene.children.getByName(_oN);
+    }
+}
+
+var logoSource = {
+    getRandomPoint: function (vec) {
+        let textureKey = vars.input.clickedOn;
+        if (textureKey===null) { return false; }
+        let qg = vars.phaserObject.quickGet;
+        let frameName = 'loadedButton';
+        if (textureKey!=='loadedButton') { // this is probably the play button (this should be moved to its own function so we have a specific place that deals with anything other than the loadedButton)
+            frameName = textureKey;
+            textureKey = 'options';
+        } else {
+            textureKey = null;
+        }
+
+        let obj = qg(frameName);
+        let origin = obj.getTopLeft();
+        let logo = { width: obj.width, height: obj.height }; 
+        let pixel;
+        do {
+            var x = Phaser.Math.Between(0, logo.width - 1);
+            var y = Phaser.Math.Between(0, logo.height - 1);
+            if (textureKey===null) {
+                pixel = scene.textures.getPixel(x, y, frameName);
+            } else {
+                pixel = scene.textures.getPixel(x, y, textureKey, frameName);
+            }
+
+        } while (pixel.alpha < 255);
+        return vec.setTo(x + origin.x, y + origin.y);
     }
 }

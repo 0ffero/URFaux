@@ -167,6 +167,27 @@
 				"w": 336,
 				"h": 338
 			}
+		},
+		{
+			"filename": "optPlayText",
+			"frame": {
+				"x": 932,
+				"y": 349,
+				"w": 210,
+				"h": 118
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 210,
+				"h": 118
+			},
+			"sourceSize": {
+				"w": 210,
+				"h": 118
+			}
 		}
 	],
 	"meta": {

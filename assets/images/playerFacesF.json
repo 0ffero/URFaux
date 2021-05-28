@@ -1,7 +1,7 @@
 {
 	"frames": [
 		{
-			"filename": "playerFaces1F",
+			"filename": "player1Face",
 			"frame": {
 				"x": 1,
 				"y": 1,
@@ -22,7 +22,7 @@
 			}
 		},
 		{
-			"filename": "playerFaces2F",
+			"filename": "player2Face",
 			"frame": {
 				"x": 293,
 				"y": 1,

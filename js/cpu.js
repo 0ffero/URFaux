@@ -536,5 +536,5 @@ vars.player.AI.getBestMove = (_movables)=> {
         }
         let cObj = vars.phaserObject.quickGet(counterName);
         vars.animate.counterToNewPosition(cObj);
-    },1000)
+    }, 1000)
 }

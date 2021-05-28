@@ -27,8 +27,9 @@ var config = {
 
         pack: {
             files: [
-                { type: 'image', key: 'loadingBG', url: 'assets/images/loadingScreen.jpg' },
-                { type: 'image', key: 'loadingText', url: 'assets/images/loadingText.png' }
+                { type: 'image', key: 'loadingBG',   url: 'assets/images/loadingScreen.jpg' },
+                { type: 'image', key: 'loadingText', url: 'assets/images/loadingText.png' },
+                { type: 'image', key: 'vignette',    url: 'assets/images/vignette.png' }
             ]
         }
     },
@@ -52,7 +53,9 @@ fetch("./assets/fileList.json").then(response => {
     fV.fileSizes=data;
     // by the time we can show a loading bar, the loadingScreen and Text will already have loaded, so we add them here
     let fSV = fV.fileSizes;
-    fSV.details.loadedSize=fSV.files['loadingScreen.jpg'] + fSV.files['loadingText.png'];
+    fSV.details.loadedSize=fSV.files['loadingScreen.jpg'] + fSV.files['loadingText.png'] + fSV.files['vignette.png'];
+    let lS = 'Loaded';
+    fSV.files['loadingScreen.jpg'] = lS; fSV.files['loadingText.png'] = lS; fSV.files['vignette.png'] = lS;
     game = new Phaser.Game(config);
 });
 
@@ -68,6 +71,10 @@ function preload() {
     this.load.plugin('rexoutlinepipelineplugin', 'js/frameworks/rexoutlinepipelineplugin.min.js', true);
     // var pipelineInstance = scene.plugins.get('rexoutlinepipelineplugin').add(gameObject, config); // <-- used when attaching to an image. This plug in has image outline!
     scene = this;
+
+    // add the vignette
+    let vig = scene.add.image(vars.canvas.cX, vars.canvas.cY, 'vignette').setTint(0x000000).setDepth(255).setName('vignette').setAlpha(0);
+    vars.animate.vignetteShow(vig);
 
     // set up the loading progress bar
     let dDepth = consts.depths.debug;

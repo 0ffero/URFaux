@@ -1,7 +1,7 @@
 var vars = {
     DEBUG: false,
 
-    version: 0.972,
+    version: 0.973,
 
     clamp: Phaser.Math.Clamp,
 
@@ -21,7 +21,10 @@ var vars = {
         changeFace: ()=> {
             let player = vars.player.current;
             let pOb = vars.phaserObject.quickGet('playerFace');
-            scene.tweens.add({ targets: pOb, alpha: 0, yoyo: true, onYoyo: (_t, _o)=> { _o.setFrame(`player${player}Face`); }, duration: 500 })
+            //pOb.setTexture('playerFacesF','playerFaces2F')
+            let textureName = vars.player[`p${vars.player.current}Face`][0]==='f' ? 'playerFacesF': 'playerFaces';
+            let frameName = `player${player}Face`;
+            scene.tweens.add({ targets: pOb, alpha: 0, yoyo: true, onYoyo: (_t, _o)=> { _o.setTexture(textureName, frameName); }, duration: 500 })
         },
 
         counterBounceTweensStop: ()=> {
@@ -606,6 +609,14 @@ var vars = {
             } else {
                 scene.tweens.add({ targets: container, y: vars.canvas.height-10, duration: duration, ease: 'Quad.easeIn', onComplete: (_t,_o)=> { _o[0].setAlpha(0.7); } })
             }
+        },
+
+        vignetteShow: (_obj)=> {
+            scene.tweens.add({
+                targets: _obj,
+                alpha: 1,
+                duration : 3000
+            })
         }
     },
 
@@ -1254,11 +1265,17 @@ var vars = {
                 console.error(`Highlighted object sent to updater (${_oName}) is not the same as the h var (${highlighted})`);
                 debugger;
             }
+        },
+
+        particleBounds: ()=>{
+            vars.particles.bounds = new Phaser.Geom.Rectangle(0, 0, 1920, 1080-10);
         }
+
     },
 
     input: {
         enabled: true,
+        clickedOn: null,
 
         init: function() {
             vars.DEBUG ? console.log('  .. 🎮 initialising input and vars') : null;
@@ -1365,17 +1382,23 @@ var vars = {
                 vars.game.rollDice();
             } else if (oName==='loadedButton') {
                 console.clear();
+                setTimeout( ()=> {
+                    vars.input.clickedOn=null;
+                },100)
                 gameObject.disableInteractive();
                 // fade out the loaded screen and text
                 // then start the game
                 let bg = vars.phaserObject.quickGet('loadedBG');
                 let btn = vars.phaserObject.quickGet('loadedButton');
-                let dur=2000;
-                if (vars.DEBUG) { dur=0; }
+                500;
+                let dur = vars.DEBUG ? 0 : 500;
                 scene.tweens.add({ targets: [bg,btn], alpha: 0, duration: dur, onComplete: vars.phaserObject.destroy })
 
-                // play menu ok sound
-                vars.audio.playSound('menuOK');
+                // make the loaded button explode into sand
+                vars.input.clickedOn = 'loadedButton';
+                vars.particles.available.sandExplosion.emitParticle();
+                // play menu ok sound - changed to sand hit to match particles
+                vars.audio.playSound('sandHit'); //menuOK
 
                 setTimeout( ()=> {
                     vars.init(3);
@@ -1398,8 +1421,12 @@ var vars = {
                 vars.audio.playSound('menuClick');
                 vars.UI.changePlayerFace(gameObject);
             } else if (oName === 'optPlay') {
-                // play menu ok sound
                 gameObject.disableInteractive();
+                // sand explosion
+                vars.input.clickedOn='optPlay';
+                vars.particles.available.sandExplosion.emitters.list[0].setQuantity(512).setScale(0.2).setLifespan(2000);
+                vars.particles.available.sandExplosion.emitParticle();
+                // play menu ok sound
                 vars.audio.playSound('menuOK');
 
                 vars.init(4);
@@ -1495,8 +1522,19 @@ var vars = {
         init: function() {
             // particles are stored here
             console.log('  .. 🎆 initialising particles and vars');
-            
+
             // sand hit
+            vars.particles.diceGroundHitInit();
+
+            // sand explosion for the loaded image
+            vars.particles.sandExplosionInit();
+
+            /* scene.input.on('pointerdown', function (pointer) {
+                vars.particles.available.sand.emitParticleAt(pointer.x, pointer.y);
+            }); */
+        },
+
+        diceGroundHitInit: ()=> {
             let depth = consts.depths.diceBG+1;
             vars.particles.available.sand = scene.add.particles('sandParticleImage').setDepth(depth);
             vars.particles.available.sand.createEmitter({
@@ -1509,11 +1547,50 @@ var vars = {
                 scale: { start: 0.5, end: 0 },
                 on: false
             });
+        },
 
+        sandExplosionInit: (_src=logoSource)=> {
+            let depth = consts.depths.loading+1;
+            vars.particles.available.sandExplosion = scene.add.particles('sandParticleImage').setDepth(depth);
+            vars.graphics.particleBounds();
+            let vs = {
+                fall: {
+                    lifespan: 3000, gravityX: 0, gravityY: 1000, bounceMin: 0.3, bounceMax: 0.5, quantity: 1024, angleMin: 0, angleMax: 360, steps: 128
+                },
+                wind: {
+                    lifespan: 2000, gravityX: 300, gravityY: 0, bounceMin: 0, bounceMax: 0, quantity: 512, angleMin: 0, angleMax: 0, steps: 0
+                }
+            }
+            let thisV = vs.fall;
+            vars.particles.available.sandExplosion.createEmitter({
+                x: 0, y: 0,
+                scale: 0.3,
+                speed: { min: 100, max: 300 },
+                tint: 0xEEB300,
+                lifespan: thisV.lifespan,
+                gravityX: thisV.gravityX,
+                gravityY: thisV.gravityY,
+                angle: { start: thisV.angleMin, end: thisV.angleMax, steps: thisV.steps },
+                alpha: { start: 1, end: 0 }, blendMode: 'ADD',
+                quantity: thisV.quantity,
+                bounce: { min: thisV.bounceMin, max: thisV.bounceMax },
+                bounds: vars.particles.bounds,
+                emitZone: { type: 'random', source: _src },
+                on: false
+            });
+        },
 
-            /* scene.input.on('pointerdown', function (pointer) {
-                vars.particles.available.sand.emitParticleAt(pointer.x, pointer.y);
-            }); */
+        sandExplosionRun: (_oName=null)=> {
+            if (_oName===null) { return false; }
+            else {
+                let qg = vars.phaserObject.quickGet;
+                let obj = qg(_oName);
+                if (obj!==undefined) {
+
+                } else {
+                    console.error(`Object with name ${_oName} was not found!`);
+                }
+            }
         }
     },
 
@@ -1632,6 +1709,11 @@ var vars = {
     },
 
     UI: {
+        /*
+        ◄████████████████████████►
+        ◄███► START OF INITS ◄███►
+        ◄████████████████████████►
+        */
         init: ()=> {
             console.log('  ..initialising the UI');
 
@@ -1744,8 +1826,9 @@ var vars = {
             let p2Image = scene.add.image(p2x, pY, 'options').setName('opt_p2i').setFrame('faceFemale').setDepth(depth);
             
             let optPlay = scene.add.image(cV.cX, cV.height-200, 'options').setFrame('optPlay').setName('optPlay').setDepth(depth).setInteractive();
+            let optPlayText = scene.add.image(cV.cX, cV.height-200, 'options').setFrame('optPlayText').setName('optPlayText').setDepth(depth);
 
-            scene.groups.options.addMultiple([bg,p1Title,p2Title,p1Image,p2Image,optPlay]);
+            scene.groups.options.addMultiple([bg,p1Title,p2Title,p1Image,p2Image,optPlay,optPlayText]);
 
             // add the 4 "select player" buttons
             let y = 300;
@@ -1783,6 +1866,14 @@ var vars = {
             setTimeout( ()=> { vars.UI.showVolumeOptions(false); }, 1000)
 
         },
+        /*
+        ◄████████████████████████►
+        ◄███►  END OF INITS  ◄███►
+        ◄████████████████████████►
+        */
+
+
+
 
         changePlayerFace: (_object)=> { // the object entering here is the arrow
             let player = _object.name.includes('p1') ? 1 : 2;
