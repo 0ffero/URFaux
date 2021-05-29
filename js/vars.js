@@ -1,7 +1,7 @@
 var vars = {
     DEBUG: false,
 
-    version: 0.973,
+    version: 0.977,
 
     clamp: Phaser.Math.Clamp,
 
@@ -157,7 +157,54 @@ var vars = {
             })
         },
 
-        counterToStart: (_cObject)=> {
+        counterTaken: (_cObject)=> {
+            // originally we were sending the counter back across the board to its start position
+            // however, now that ive implemented particles, im gonna use them instead for 2 reasons.
+            // 1) The current back to start needs work to get the correct frame for each position (a simple fix but it simply isnt pretty)
+            // 2) Particles are prettier and give the impression of actually smashing a piece back to the start position
+            vars.input.clickedOn=_cObject.name;
+            let colour = vars.input.clickedOn.replace('counter','')[0];
+            let startPosition = colour === 'w' ? vars.boardPositions[`wS`] : vars.boardPositions[`bS`];
+            let data =  { boardPosition: '', moveFrom: '', moveTo: '', taking: '', x: startPosition.x, y: startPosition.y }
+            _cObject.setData(data);
+            // quanity is now based on size of the sprite/image
+            let sizeAndPos = vars.phaserObject.getSizeAndPosByName(vars.input.clickedOn);
+            if (!sizeAndPos) {
+                console.error(`The object either wasnt found or simply doesnt exist`);
+                return false;
+            }
+
+            // if we get here we have a size and position of the counter
+            let particleCount = vars.particles.getParticleCount(sizeAndPos);
+            if (!Number.isInteger(particleCount) || particleCount<1) {
+                console.error(`Invalid particle count returned!`);
+                return false;
+            }
+            console.log(`🎆 Particle count for emitter is ${particleCount}`);
+
+
+            // if we get this far, we have a valid particle count
+            // do all the things
+
+            // fade out the counter thats being taken
+            let duration = 100;
+            vars.animate.fadeTheThing(_cObject, duration);
+            // and move it back to its start position
+            setTimeout( ()=> { _cObject.setPosition(startPosition.x, startPosition.y).setFrame(`${colour}S`); }, duration*2);
+            // create the explosion of sand
+            vars.particles.available.sandExplosion.emitters.list[0].setQuantity(particleCount).setScale(0.3).setLifespan(1000);
+            vars.particles.available.sandExplosion.emitParticle();
+            // make a ptoooshhh noise
+            vars.audio.playSound('sandHit');
+
+            // move the taken counter to the start position
+
+            vars.animate.popupWait = duration*5;
+
+
+
+            return false;
+            // ANYTHING AFTER HERE WAS THE ORIGINAL CODE
             vars.DEBUG ? console.log(`Sending ${_cObject.name} to start position`) : null;
             let path = vars.game.generateBackToStartPath(_cObject);
 
@@ -180,7 +227,7 @@ var vars = {
                 scene.tweens.add({
                     targets: _cObject,
                     x: x, y: y,
-                    duration: dur, // maximim duration will be 7 (attack squares when starting at a8) + 4 (starting sqaures) + 1 (when reaching the start sqaure) * 125 = 1.5s
+                    duration: dur, // maximim duration will be 7 (attack squares when starting at a8) + 4 (starting squares) + 1 (when reaching the start square) * 125 = 1.5s
                     delay: _i*dur,
                     onComplete: oC
                 })
@@ -200,7 +247,7 @@ var vars = {
             object.setFrame(frameName);
             // set this counters position using "set data on _o"
 
-            if (lastMove===true) {
+            if (lastMove) {
                 vars.DEBUG ? console.log(`  > The counter has reached its destination`) : null;
                 let pV = vars.player;
                 // WE NEED TO UPDATE THE COUNTER OBJECTS DATA
@@ -208,48 +255,10 @@ var vars = {
                 object.setData({ boardPosition: bPos, moveFrom: '', moveTo: '', x: x, y: y });
                 // IF TAKING IS NOT EMPTY, TAKE THE PIECE. WE NEED TO DO THIS BEFORE UPDATING THE BOARD FOR THE ATTACKING PLAYER
                 let taking = object.getData('taking');
-                if (taking!=='') { vars.game.takePiece(taking); }
-
-                // decrease the counters depth so it moves back to its original depth
-                object.setDepth(object.depth-2);
-
-                // UPDATE THE BOARD POSITIONS
-                let bP = vars.boardPositions[bPos];
-                bP.takenByPlayer = pV.current;
-                let win = false;
-                if (bPos.includes('E')) {
-                    bP.counterName.push(cName);
-                    bP.takenByPlayer=0; // the end sqaure can hold multiple counters
-                    vars.animate.counterToEndPosition(cName);
-                    // check for win
-                    win = vars.game.checkForWin(bP.counterName);
+                if (taking!=='') { 
+                    vars.game.takePiece(taking, bPos, object); // this function will need to request move complete after finishing! IMPORTANT TODO
                 } else {
-                    bP.counterName=cName;
-                }
-
-                if (win===true) {
-                    // show win message etc
-                    pV.win = true;
-                    let winner = pV.current;
-                    pV.wins[winner]++;
-                    vars.UI.showMessage(`PLAYER ${winner} WINS!`, -1, true);
-                    vars.animate.faceToCentre();
-                    vars.audio.playerWinLose(winner);
-                    return false;
-                }
-
-
-                // NO WIN STATE FOUND
-
-                // TEST IF THE PLAYER LANDED ON A "FREE SHOT" SQUARE
-                let pCol = cName.replace('counter','')[0];
-                if (bPos===`${pCol}4` || bPos===`${pCol}6` || bPos===`a4`) { // the current player gets another shot
-                    if (bPos==='a4') {
-                        vars.animate.showBarrier(true);
-                    }
-                    vars.player.nextPlayer(true);
-                } else { // next players shot
-                    vars.player.nextPlayer();
+                    vars.game.moveComplete(object, bPos);
                 }
 
                 // disable all counters
@@ -292,7 +301,8 @@ var vars = {
         faceToCentre: ()=> {
             vars.DEBUG ? console.log('Sending player face to centre x.') : null;
             let pf = vars.phaserObject.quickGet('playerFace');
-            scene.tweens.add({ targets: pf, x: vars.canvas.cX, duration: 2000, ease: 'Quad' })
+            let o = pf.width/2;
+            scene.tweens.add({ targets: pf, x: vars.canvas.cX-o, duration: 2000, ease: 'Quad' })
         },
 
         faceToStartPosition: ()=> {
@@ -303,6 +313,15 @@ var vars = {
                 x: pfPos[0],
                 duration: 2000,
                 ease: 'Quad'
+            })
+        },
+
+        fadeTheThing: (_object=null, _duration=1000)=> {
+            if (_object===null) { return false; }
+            scene.tweens.add({
+                targets: _object,
+                alpha: 0,
+                duration: _duration
             })
         },
 
@@ -1101,6 +1120,50 @@ var vars = {
             return validMoves;
         },
 
+        moveComplete: (object, bPos)=> {
+            let pV = vars.player;
+            let cName = object.name;
+            // decrease the counters depth so it moves back to its original depth
+            object.setDepth(object.depth-2);
+
+            // UPDATE THE BOARD POSITIONS
+            let bP = vars.boardPositions[bPos];
+            bP.takenByPlayer = pV.current;
+            let win = false;
+            if (bPos.includes('E')) {
+                bP.counterName.push(cName);
+                bP.takenByPlayer=0; // the end square can hold multiple counters
+                vars.animate.counterToEndPosition(cName);
+                // check for win
+                win = vars.game.checkForWin(bP.counterName);
+            } else {
+                bP.counterName=cName;
+            }
+
+            if (win===true) {
+                // show win message etc
+                pV.win = true;
+                let winner = pV.current;
+                pV.wins[winner]++;
+                vars.UI.showMessage(`PLAYER ${winner} WINS!`, -1, true);
+                vars.animate.faceToCentre();
+                vars.audio.playerWinLose(winner);
+                return false;
+            }
+
+
+            // NO WIN STATE FOUND
+
+            // TEST IF THE PLAYER LANDED ON A "FREE SHOT" SQUARE
+            let pCol = cName.replace('counter','')[0];
+            if (bPos===`${pCol}4` || bPos===`${pCol}6` || bPos===`a4`) { // the current player gets another shot
+                if (bPos==='a4') { vars.animate.showBarrier(true); } // if the player moved to a4, show the barrier
+                vars.player.nextPlayer(true); // player gets another shot
+            } else { // next players shot
+                vars.player.nextPlayer();
+            }
+        },
+
         resetBoard: ()=> {
             vars.DEBUG ? console.groupCollapsed('Resetting all board positions'): null;
             for (bP in vars.boardPositions) {
@@ -1191,7 +1254,7 @@ var vars = {
             vars.animate.showOptions(false);
         },
 
-        takePiece: (_objectName)=> {
+        takePiece: (_objectName, _bPos, _object)=> {
             console.log(`Taking ${_objectName}`);
             // we need a few variables here as we are gonna reset most of them
             let bPs = vars.boardPositions;
@@ -1201,22 +1264,43 @@ var vars = {
                 console.error(`Object was NOT found!`);
                 return false;
             }
-        
+
             let colour = _objectName.replace('counter','')[0];
             // clear the board position
             let bP = takenCounterObject.getData('boardPosition');
             bPs[bP].counterName = '';
             bPs[bP].takenByPlayer = vars.player.getCurrent()[0];
 
-            // reset the data for this object
-            //let cStartPos = bPs[`${colour}S`];
-            //let x = cStartPos.x; let y = cStartPos.y;
-            // animate the counter back to its start position
-            vars.animate.counterToStart(takenCounterObject);
-
             // now we need to push this counter name back onto the at start var
             let colourFull = colour === 'w' ? 'white' : 'black';
             vars.player.counters[colourFull].atStart.push(_objectName);
+
+            let delay=0; let duration = 500;
+            // lift the counter
+            scene.tweens.add({
+                targets: _object,
+                y: _object.y-60,
+                duration: duration,
+                ease: 'Quint.easeOut'
+            })
+            delay+=duration; duration/=4;
+
+            // and drop it
+            scene.tweens.add({
+                targets: _object,
+                y: _object.getData('y'),
+                duration: duration,
+                delay: delay,
+                ease: 'Quint.easeIn'
+            })
+            delay+=duration;
+            // before this happens, our counter needs to move up, slowly then smash down onto the counter being taken
+            setTimeout( ()=> {
+                vars.animate.counterTaken(takenCounterObject); // this now makes the counter explode
+                vars.game.moveComplete(_object, _bPos);
+            }, delay);
+
+
         }
 
     },
@@ -1312,7 +1396,7 @@ var vars = {
                         for (let a in list) {
                             textArray.push(`\n${a}: ${list[a]==='' ? 'EMPTY' : list[a]}`);
                         }
-                        msg = `DATA:\n${textArray}`;
+                        msg = `\nDATA:${textArray}`;
                     } else {
                         msg = 'DATA: N/A'
                     }
@@ -1549,7 +1633,18 @@ var vars = {
             });
         },
 
-        sandExplosionInit: (_src=logoSource)=> {
+        getParticleCount: (_data)=> {
+            let w = _data.width;
+            let h = _data.height;
+            if (w===undefined || h===undefined) { return false; }
+            let a = w*h;
+            let max = 700000;
+            let clamped = vars.clamp(a,1,max);
+            let particleCount = vars.clamp(~~(clamped/max*1024),192,1024); // I could just return this but its less clear, so it stays
+            return particleCount;
+        },
+
+        sandExplosionInit: (_src=vars.phaserObject.logoSource)=> {
             let depth = consts.depths.loading+1;
             vars.particles.available.sandExplosion = scene.add.particles('sandParticleImage').setDepth(depth);
             vars.graphics.particleBounds();

@@ -201,32 +201,61 @@ vars.phaserObject = {
         }
     },
 
+    getSizeAndPosByName: (_objectName='', _returnObject=false)=> {
+        if (_objectName==='') {
+            return false;
+        }
+
+        // if we get here a valid name was passed
+        let qg = vars.phaserObject.quickGet;
+        let object = qg(_objectName);
+        if (object===undefined) { return false; }
+
+        // if we get this far we have a valid object
+        let details = { x: object.x, y: object.y, width: object.width, height: object.height }
+        if (_returnObject) {
+            details.object = object;
+        }
+        return details;
+    },
+
     quickGet: (_oN=null)=> {
         if (_oN===null) { return false; }
         return scene.children.getByName(_oN);
     }
 }
 
-var logoSource = {
+vars.phaserObject.logoSource = {
     getRandomPoint: function (vec) {
         let textureKey = vars.input.clickedOn;
         if (textureKey===null) { return false; }
         let qg = vars.phaserObject.quickGet;
         let frameName = 'loadedButton';
+        let updateFrameName=false;
         if (textureKey!=='loadedButton') { // this is probably the play button (this should be moved to its own function so we have a specific place that deals with anything other than the loadedButton)
-            frameName = textureKey;
-            textureKey = 'options';
+            updateFrameName=true;
+            if (textureKey.includes('counter')) {
+                frameName = textureKey; // this order matters!
+                textureKey = 'counters';
+            } else {
+                frameName = textureKey; // same here
+                textureKey = 'options';
+            }
         } else {
             textureKey = null;
         }
 
         let obj = qg(frameName);
+        if (obj===undefined) { return false; }
+        if (updateFrameName) { // if we're dealing with a counter we need to use the frame name, not the texture key 
+            frameName = obj.frame.name;
+        }
         let origin = obj.getTopLeft();
         let logo = { width: obj.width, height: obj.height }; 
-        let pixel;
+        let pixel,x,y;
         do {
-            var x = Phaser.Math.Between(0, logo.width - 1);
-            var y = Phaser.Math.Between(0, logo.height - 1);
+            x = Phaser.Math.Between(0, logo.width - 1);
+            y = Phaser.Math.Between(0, logo.height - 1);
             if (textureKey===null) {
                 pixel = scene.textures.getPixel(x, y, frameName);
             } else {
