@@ -1,7 +1,7 @@
 vars.init = (stage=1)=> { // ENTRY POINT IS HERE
     let v = vars;
 
-    console.log(`%cInitialising Stage ${stage}`, 'color: #00f000; font-size: 14px;');
+    vars.DEBUG ? console.log(`%cInitialising Stage ${stage}`, 'color: #00f000; font-size: 14px;') : null;
     if (stage===1) { // preloader
         v.files.init(); // load all files
     }
@@ -73,7 +73,7 @@ vars.canvas = {
 
 vars.containers = {
     init: ()=> {
-        console.log(`  .. 🥡 initialising containers... kinda hungry tbh...`);
+        vars.DEBUG ? console.log(`  .. 🥡 initialising containers... kinda hungry tbh...`) : null;
         if (typeof scene.containers === 'object') { return false; }
         scene.containers = {};
         let volCon = scene.containers.volumeOptions = scene.add.container().setName('volumeOptions').setData('visible', false);
@@ -93,6 +93,7 @@ vars.files = {
         let fV = vars.files;
         fV.audio.init();
         fV.images.init();
+        fV.fonts.init();
     },
 
     audio: {
@@ -128,21 +129,29 @@ vars.files = {
         }
     },
 
+    fonts: {
+        init: ()=> {
+            scene.load.bitmapFont('defaultFont', 'fonts/defaultFont.png', 'fonts/defaultFont.xml');
+        }
+    },
+
     images: {
         init: ()=> {
             scene.load.image('sandBG',         'images/sand.jpg');
             scene.load.image('boardBG',        'images/board.png');
+            scene.load.image('playButtonBG',   'images/playButtonBG.jpg');
+            scene.load.image('loadedBG',       'images/loadedScreen.jpg');
+            scene.load.image('loadedButton',   'images/loaded.png');
+            scene.load.image('shielded',       'images/shielded.png');
+            scene.load.image('whitePixel',     'images/whitePixel.png');
+
             scene.load.atlas('counters',       'images/counters.png',      'images/counters.json');
             scene.load.atlas('dice',           'images/dice.png',          'images/dice.json');
             scene.load.atlas('options',        'images/optionImages.png',  'images/optionImages.json');
             scene.load.atlas('optionsVolume',  'images/optionsVolume.png', 'images/optionsVolume.json');
             scene.load.atlas('playerFaces',    'images/playerFaces.png',   'images/playerFaces.json');
             scene.load.atlas('playerFacesF',   'images/playerFacesF.png',  'images/playerFacesF.json');
-            scene.load.image('playButtonBG',   'images/playButtonBG.jpg');
-            scene.load.image('loadedBG',       'images/loadedScreen.jpg');
-            scene.load.image('loadedButton',   'images/loaded.png');
-            scene.load.image('shielded',       'images/shielded.png');
-            scene.load.image('whitePixel',     'images/whitePixel.png');
+            scene.load.atlas('playerFacesC',   'images/playerFacesC.png',  'images/playerFacesC.json');
 
             // particles
             scene.load.image('sandParticleImage', 'particles/whiteSmall.png');
@@ -177,7 +186,7 @@ vars.localStorage = {
             lS.urfaux_DEV  = false;
         } else {
             vars.DEBUG = (lS.urfaux_DEV==='true');
-            if (vars.DEBUG===true) {
+            if (vars.DEBUG) {
                 // show debug string
             }
         }
@@ -189,14 +198,16 @@ vars.game.logo = 'iVBORw0KGgoAAAANSUhEUgAAAooAAABkCAQAAACrrNncAAATL0lEQVR4AezVMQ
 vars.phaserObject = {
     destroy: (_t, _o=null)=> {
         if (Array.isArray(_o)) {
-            console.log(` 🚽 %c Destroying Object with name %c` + _o[0].name, 'color: #f00;', 'color: white;');
+            vars.DEBUG ? console.log(` 🚽 %c Destroying Object with name %c` + _o[0].name, 'color: #f00;', 'color: white;') : null;
             _o[0].destroy();
         } else if (_o!==null) {
             _o.destroy();
         } else {
-            let msg = '🛑💀👎 Object is of unknown type! 👎💀🛑\nIf the console is open execution will pause.';
-            alert(msg);
-            console.error(msg);
+            if (vars.DEBUG) {
+                let msg = '🛑💀👎 Object is of unknown type! 👎💀🛑\nIf the console is open execution will pause.';
+                alert(msg);
+                console.error(msg);
+            }
             debugger;
         }
     },

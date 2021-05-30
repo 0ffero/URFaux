@@ -255,7 +255,7 @@ vars.player.AI.determineBestMove = (_moveList)=> {
     vars.DEBUG ? console.table(bestMoves) : null;
 
     if (bestMoves.length>1) { // there were multiple "best" moves. Choose one based on positives and negatives
-        console.log(`\nOK, there are still more than 1 "best" moves. Testing the good against the bad`);
+        vars.DEBUG ? console.log(`\nOK, there are still more than 1 "best" moves. Testing the good against the bad`) : null;
         let bestMove = -Infinity;
         let averages = []
         bestMoves.forEach( (_b)=> {
@@ -315,7 +315,7 @@ vars.player.AI.getMovesCPU = (_movables)=> {
 
     if (!Array.isArray(movable)) {
         let msg = 'The array of movables is invalid.';
-        console.log(msg);
+        vars.DEBUG ? console.log(msg) : null;
         vars.UI.showErrorScreen(msg);
         return false;
     }
@@ -335,9 +335,11 @@ vars.player.AI.getMovesCPU = (_movables)=> {
         }
     })
 
-    console.log('Board Positions ...')
-    console.table(boardPositions);
-    console.log('---------------------------------------------------');
+    if (vars.DEBUG) {
+        console.log('Board Positions ...')
+        console.table(boardPositions);
+        console.log('---------------------------------------------------');
+    }
 
 /*
    ◄██████████████████████████████►
@@ -360,10 +362,12 @@ vars.player.AI.getMovesCPU = (_movables)=> {
     // empty the response variable as it isnt needed any more
     response = null;
 
-    console.log('PC attack object (shows what counters are under attack)...')
-    console.table(pCAttack); // needed when checking whether our black counter should move based on attackers
-    console.log('\nPC blocks object (shows what counters would be under attack is one of the black counters moved here)...')
-    console.table(pCBlocks); // needed when checking whether after moving a black counter would cause it to have attackers
+    if (vars.DEBUG) {
+        console.log('PC attack object (shows what counters are under attack)...')
+        console.table(pCAttack); // needed when checking whether our black counter should move based on attackers
+        console.log('\nPC blocks object (shows what counters would be under attack is one of the black counters moved here)...')
+        console.table(pCBlocks); // needed when checking whether after moving a black counter would cause it to have attackers
+    }
     // END OF BUILD PLAYER OBJECTS
 
 
@@ -376,7 +380,7 @@ vars.player.AI.getMovesCPU = (_movables)=> {
     // TEST AGAINST THE RULES SHOWN ABOVE
     // we need to add a threat level based on how many enemy counters can take each counter (using pCAttack)
     playerCounters = detail ? console.table(playerCounters) : null; // <-- if detail is on, show it, otherwise nullify the var (the detail isnt really needed unless debuging)
-    console.log('\n\nAssessing Threat Levels (rules 2 and 3)...');
+    vars.DEBUG ? console.log('\n\nAssessing Threat Levels (rules 2 and 3)...') : null;
     movable.forEach( (_m)=> {
         // let moveTo = _m[1]; let cTaking = _m[2];
         if (_m[3]===undefined) { _m.push(0,[],[], false); } // _m[3] = points, _m[4] = resons to move, _m[5] = reasons against moving, _m[6] is optimal move?
@@ -396,7 +400,7 @@ vars.player.AI.getMovesCPU = (_movables)=> {
    ◄███► CHECK RULES 1, 4 AND 5 ◄███►
    ◄████████████████████████████████►
 */
-    console.log('\n\nAssessing Rules 1, 4 & 5...');
+    vars.DEBUG ? console.log('\n\nAssessing Rules 1, 4 & 5...') : null;
     // as rule 1 contains the check for optimal move, we can ignore everything after finding one - note it might be better to first check which free square were moving to possible TODO
     // more info: as an example, if both b4 and a4 can be taken then a4 should probably be choosen over any other position as its on the attack lane AND is untakable
     // so, main priority is a4 as b4 could be taken on the next free throw. If we take b4, the next throw might not land the other counter on a4 (hence a4 is actually safer even though b4 is untakable as a4 is firther up the board and closer to home)
@@ -425,12 +429,14 @@ vars.player.AI.getMovesCPU = (_movables)=> {
         // update the score for this counter
         _m[3]+=score;
     })
-    console.log(`Movable counter array looks like:`);
-    console.table(movable);
+    if (vars.DEBUG) {
+        console.log(`Movable counter array looks like:`);
+        console.table(movable);
+    }
 
     // figure out best move
     let bestMove = vars.player.AI.determineBestMove(movable);
-    console.log(`Best move would be by ${bestMove}`);
+    vars.DEBUG ? console.log(`Best move would be by ${bestMove}`) : null;
     return bestMove;
 
 }
@@ -453,8 +459,10 @@ vars.player.AI.getStacks = (_from, _to)=> {
         }
     })
 
-    console.log(`\n\nCurrent defensive strengths:`);
-    console.table(strengths);
+    if (vars.DEBUG) {
+        console.log(`\n\nCurrent defensive strengths:`);
+        console.table(strengths);
+    }
 
     let strengthsAfterMove = { black: 0, white: 0 }
     // update the bPs
@@ -476,8 +484,10 @@ vars.player.AI.getStacks = (_from, _to)=> {
         }
     })
 
-    console.log(`\n\nAttack strengths after move:`);
-    console.table(strengthsAfterMove);
+    if (vars.DEBUG) {
+        console.log(`\n\nAttack strengths after move:`);
+        console.table(strengthsAfterMove);
+    }
 
     // attack strength after move
     let whiteAttackLane = [...consts.playerPaths.white].splice(1,7); // even though this is the white lane, both white and black use the attack lane
@@ -490,7 +500,7 @@ vars.player.AI.getStacks = (_from, _to)=> {
         }
         aLS+=fauxBoard[_a].takenByPlayer.toString();
     })
-    console.log(aLS);
+    vars.DEBUG ? console.log(aLS) : null;
 }
 
 vars.player.AI.popped = null;
@@ -505,11 +515,11 @@ vars.player.AI.popped = null;
 vars.player.AI.getBestMove = (_movables)=> {
     // OK, so we have already bounced the counters that are movable
     let counterName = vars.player.AI.getMovesCPU(_movables); // will return counterb_x or false
-    console.log(`The selected counter is ${counterName}`);
+    vars.DEBUG ? console.log(`The selected counter is ${counterName}`) : null;
     if (!counterName || !counterName.includes('counterb_')) {
         let msg = `The counter name doesnt appear to be valid`;
         vars.UI.showErrorScreen(`ERROR:\n\n${msg}\nCounter Name: ${counterName}\n\nThis needs fixing and is unrecoverable.\n\nIf the console is open, execution will stop.`);
-        console.error(msg);
+        vars.DEBUG ? console.error(msg) : null;
         return false;
     }
 

@@ -118,7 +118,7 @@ function create() {
 
     let endTime = new Date();
     let totalTime = endTime - startTime;
-    console.log(`🕔 Initialisation took %c${totalTime}ms`, 'font-weight: bold');
+    vars.DEBUG ? console.log(`🕔 Initialisation took %c${totalTime}ms`, 'font-weight: bold') : null;
     endTime = startTime = null;
 
 

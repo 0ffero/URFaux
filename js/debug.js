@@ -21,7 +21,7 @@ vars.debugFN = {
     attackLaneInit: ()=> {
         console.groupCollapsed('Initialising counters...');
         let bPs = vars.boardPositions;
-        ['b3','a2','a3','a4'].forEach( (_pos, _i)=> {
+        ['b3','a3','a4'].forEach( (_pos, _i)=> {
             let cName = vars.player.counters.black.atStart.pop();
             bPs[_pos].takenByPlayer=2;
             bPs[_pos].counterName=cName;
@@ -33,10 +33,10 @@ vars.debugFN = {
             console.log(`  > Added black counter to position ${_pos}`);
         }); // <-- this semi-colon is needed or else the white counters will fail o.0 (Im missing something, but cant figure out what)
         // im assuming the interp is seeing something like
-        // [array].fE(()=>{})[newArray].fE(()=>{})
+        // [array].fE(()=>{})[newArray].fE(()=>{}) after removing whitespace
         // and chrome (/browsers?) dont deal with it well.
 
-        ['w4','w2','a1'].forEach( (_a,_i)=> {
+        ['w4','w2','a2'].forEach( (_a,_i)=> {
             let cName = vars.player.counters.white.atStart.pop();// `counterw_${6-_i}`;
             bPs[_a].takenByPlayer=1;
             bPs[_a].counterName=cName;

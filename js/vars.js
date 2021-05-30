@@ -1,7 +1,7 @@
 var vars = {
     DEBUG: false,
 
-    version: 0.978,
+    version: 0.98,
 
     clamp: Phaser.Math.Clamp,
 
@@ -14,8 +14,8 @@ var vars = {
         bouncingCounters: [],
 
         init: function() {
-            console.log('  .. 🌑🌒🌓🌕🌗🌘🌑 initialising animations and vars');
-             vars.animate.popupWait=0;
+            vars.DEBUG ? console.log('  .. 🌑🌒🌓🌕🌗🌘🌑 initialising animations and vars') : null;
+            vars.animate.popupWait=0;
         },
 
         changeFace: ()=> {
@@ -39,7 +39,7 @@ var vars = {
         },
 
         counterFadeOut: (_t,_o)=> {
-            console.log(`Fading out ${_o[0].name}`);
+            vars.DEBUG ? console.log(`Fading out ${_o[0].name}`) : null;
             let bPs = vars.boardPositions;
             let frameName = `${_o[0].frame.name[0]}S`;
             let x = bPs[frameName].x; let y = bPs[frameName].y;
@@ -180,7 +180,7 @@ var vars = {
                 console.error(`Invalid particle count returned!`);
                 return false;
             }
-            console.log(`🎆 Particle count for emitter is ${particleCount}`);
+            vars.DEBUG ? console.log(`🎆 Particle count for emitter is ${particleCount}`) : null;
 
 
             // if we get this far, we have a valid particle count
@@ -289,6 +289,21 @@ var vars = {
             })
         },
 
+        diceFadeOut: (_out=true)=> {
+            // grab all the dice
+            let diceArray = vars.game.getDiceObjects();
+            // fade
+            let alpha = _out ? 0.5 : 1;
+            diceArray.forEach( (_d)=> {
+                scene.tweens.add({
+                    targets: _d,
+                    alpha: alpha,
+                    duration: 1000,
+                    delay: 1000
+                })
+            })
+        },
+
         diceDropShadows: (_targets)=> {
             vars.DEBUG ? console.log(`Adding dice drop shadows`) : null;
             let dur = 1000;
@@ -377,7 +392,7 @@ var vars = {
         loadingBarProgressUpdate: (_fileData)=> {
             if (vars.files.loaded>=1) {
                 vars.DEBUG ? console.warn(`All files have already loaded.\nAnd this isnt a stream... this may be a problem for the progress bar`) : null;
-                console.log(_fileData);
+                vars.DEBUG ? console.log(_fileData) : null;
                 return false;
             }
 
@@ -412,7 +427,7 @@ var vars = {
                 bar.object.fillRect(vars.canvas.cX-bar.width/2, vars.canvas.height*0.85+10, bar.width * loadedPercent, bar.height);
 
                 if (scene.load.progress===1) {
-                    console.log(`Finished loading files.`);
+                    vars.DEBUG ? console.log(`Finished loading files.`) : null;
                     if (loadedPercent!==1) {
                         console.warn(` - All files loaded but the file list still has unloaded assets in it.`);
                         console.table(vars.files.fileSizes.files);
@@ -525,7 +540,7 @@ var vars = {
                     })
                 })
             } else { // single die has been passed
-                console.log(` > Looping for die ${_diceArray.name.replace('dice','')}`);
+                vars.DEBUG ? console.log(` > Looping for die ${_diceArray.name.replace('dice','')}`) : null;
                 scene.tweens.add({
                     targets: _diceArray, alpha: 0,
                     duration: 250,
@@ -626,7 +641,7 @@ var vars = {
 
         startingCounter: (_cID, _moveTo) => {
             let playerColour = _cID.replace('counter','')[0] === 'w' ? 'white' : 'black';
-            console.log(`  > Showing starter counter for ${playerColour}`);
+            vars.DEBUG ? console.log(`  > Showing starter counter for ${playerColour}`) : null;
             let counter = vars.phaserObject.quickGet(_cID);
             counter.setData({ 'moveTo': _moveTo, 'moveFrom': _moveTo[0] + 'S' });
             scene.tweens.add({
@@ -676,13 +691,13 @@ var vars = {
         howlerStream: null,
 
         init: function() {
-            console.log('  .. 🔊 initialising audio and vars');
+            vars.DEBUG ? console.log('  .. 🔊 initialising audio and vars') : null;
             let aV = vars.audio;
             scene.sound.volume=aV.volume.phaser;
             aV.streams = Phaser.Utils.Array.NumberArray(0,9,'busymarketplaceFIFO');
             // as howler deals with streams which are quieter than the sound effects (my bad) we need a multiplier so we can chane the volume
             aV.volume.multiplier = aV.volume.howler/aV.volume.phaser;
-            console.log(`  .. 🔊 Initialising volume multiplier (set to ${~~(aV.volume.multiplier*1000)/1000}).`);
+            vars.DEBUG ? console.log(`  .. 🔊 Initialising volume multiplier (set to ${~~(aV.volume.multiplier*1000)/1000}).`) : null;
 
             if (vars.DEBUG) {
                 // drop the volume to base (it gets annoying after a while... is this a problem? POSSIBLE TODO)
@@ -809,7 +824,7 @@ var vars = {
                 vars.audio.howlerStream.volume(vV.howler);
             }
             scene.sound.setVolume(vV.phaser);
-            console.log(`🔊 Setting non ambience volume to ${vV.phaser}. Ambience volume is now ${vV.howler}`);
+            vars.DEBUG ? console.log(`🔊 Setting non ambience volume to ${vV.phaser}. Ambience volume is now ${vV.howler}`) : null;
         },
 
         volumeChange: (_increase)=> {
@@ -842,7 +857,7 @@ var vars = {
         mainCam: null,
 
         init: function() {
-            console.log('  .. 📷 initialising cameras and vars');
+            vars.DEBUG ? console.log('  .. 📷 initialising cameras and vars'): null;
             vars.camera.mainCam = scene.cameras.main;
         },
 
@@ -855,7 +870,7 @@ var vars = {
         startingCounter: '',
 
         init: ()=>{
-            console.log('  ..initialising game and vars');
+            vars.DEBUG ? console.log('  ..initialising game and vars') : null;
         },
 
         checkForWin: (_counterArray)=> {
@@ -869,12 +884,13 @@ var vars = {
 
         diceEnable: (_enable=true, _newGame=false)=> {
             // re-enable the dice
+            vars.animate.diceFadeOut(false);
             let diceArray = vars.game.getDiceObjects();
             vars.input.diceEnable(diceArray, true);
             // reset all the dice data
-            console.groupCollapsed('🎲 Reseting all dice')
+            vars.DEBUG ? console.groupCollapsed('🎲 Reseting all dice') : null;
             diceArray.forEach( (d)=> { vars.game.resetDiceData(d, _newGame); })
-            console.groupEnd();
+            vars.DEBUG ? console.groupEnd() : null;
         },
 
         diceUpdate: (_tween, _object)=> {
@@ -884,9 +900,9 @@ var vars = {
             if (Array.isArray(_object)) {
                 _object = _object[0];
                 complete=true;
-                console.log(`Dice Update (onComplete) for ${_object.name}`);
+                vars.DEBUG ? console.log(`Dice Update (onComplete) for ${_object.name}`) : null;
             } else {
-                console.log(`Dice Update (onYoyo) for ${_object.name}`);
+                vars.DEBUG ? console.log(`Dice Update (onYoyo) for ${_object.name}`) : null;
             }
 
             // get a random die face
@@ -909,7 +925,7 @@ var vars = {
                 if (complete===true && rollNumber!==maxRolls) {
                     vars.animate.randomiseDice(_object);
                 } else if (rollNumber===maxRolls) {
-                    console.log(`  ${_object.name} has rolled ${maxRolls} times`);
+                    vars.DEBUG ? console.log(`  ${_object.name} has rolled ${maxRolls} times`) : null;
 
                     // this die has rolled 4 full times, add it to the total
                     let points = _object.getData('points');
@@ -917,14 +933,15 @@ var vars = {
                     vars.player.diceComplete++;
 
                     if (vars.player.diceComplete===4) { // all dice have been counted
+                        vars.animate.diceFadeOut();
                         console.groupEnd();
 
                         if (vars.force!==undefined) { // if dice force is enabled
                             if (vars.force!==-1) {
-                                console.log(`🏋🎲 %cForcing Dice Roll to ${vars.force}`, 'color: green; font-weight: bold; font-size: 14px;');
+                                vars.DEBUG ? console.log(`🏋🎲 %cForcing Dice Roll to ${vars.force}`, 'color: green; font-weight: bold; font-size: 14px;') : null;
                                 vars.player.pointsTotal=vars.force;
                             } else {
-                                console.log(`🏋🎲 %cForce is ON but force value is not set.`,'color: red; background-color: white; font-size: 14px;');
+                                vars.DEBUG ? console.log(`🏋🎲 %cForce is ON but force value is not set.`,'color: red; background-color: white; font-size: 14px;') : null;
                             }
                         }
 
@@ -944,7 +961,7 @@ var vars = {
                         // the player rolled a 0 (lol)
                         if (validMoves==='points') {
                             // show some sort of error message and reset everything
-                            console.log(`Player threw a 0. Showing pop up message`);
+                            vars.DEBUG ? console.log(`Player threw a 0. Showing pop up message`) : null;
                             let players = vars.player.getCurrent();
                             let msg = `Player ${players[0]} threw a 0.\n\nPlayer ${players[1]}, please roll the dice.`;
                             vars.UI.showMessage(msg);
@@ -954,15 +971,18 @@ var vars = {
                         }
 
                         // roll was > 0 but no valid moves found
-                        if (validMoves===false) {
-                            let currentPlayer = vars.player.getCurrent();
-                            // display message
-                            let msg = `Player ${currentPlayer[0]}.\nNo valid moves found.\n\nPlayer ${currentPlayer[1]}, please roll the dice.`;
-                            vars.UI.showMessage(msg);
-                            vars.player.nextPlayer('skip');
-
-                            // we need to add a voice here saying no move found TODO
+                        if (!validMoves) {
+                            // play voice
                             vars.audio.sentenceBuild('novalid');
+                            // next player
+                            // this should be offset as its showing the next player to early
+                            setTimeout( ()=> {
+                                let currentPlayer = vars.player.getCurrent();
+                                // display message
+                                let msg = `Player ${currentPlayer[1]}, roll the dice.`;
+                                vars.UI.showMessage(msg);
+                                vars.player.nextPlayer('skip');
+                            }, 4500)
 
                             return false;
                         }
@@ -1015,7 +1035,7 @@ var vars = {
                 return false;
             }
 
-            console.log(`Finding path from ${_startPosition} to ${_endPosition}`);
+            vars.DEBUG ? console.log(`Finding path from ${_startPosition} to ${_endPosition}`) : null;
 
             // get the board path for the players colour
             // each board position takes 333ms to traverse
@@ -1026,7 +1046,7 @@ var vars = {
             let foundEnd = false;
             path.forEach( (_p)=> {
                 if (_endPosition===_p) { // this is the destinaation for the counter
-                    console.log('Found the end position');
+                    vars.DEBUG ? console.log('Found the end position') : null;
                     counterPath.push([_p, bPs[_p]]);
                     foundEnd = true;
                 }
@@ -1036,7 +1056,7 @@ var vars = {
                 }
 
                 if (_startPosition===_p && foundStart===false) {
-                    console.log('Found the start position');
+                    vars.DEBUG ? console.log('Found the start position') : null;
                     foundStart=true;
                 }
             })
@@ -1064,7 +1084,7 @@ var vars = {
 
             let currentPlayer = pV.current;
             let cPColour = currentPlayer === 1 ? 'white' : 'black';
-            console.log(`Looking for valid moves for player ${currentPlayer} who rolled a ${points}`);
+            vars.DEBUG ? console.log(`Looking for valid moves for player ${currentPlayer} who rolled a ${points}`) : null;
 
             let bPs = vars.boardPositions;
             let board = currentPlayer === 1 ? consts.playerPaths.white : consts.playerPaths.black;
@@ -1134,7 +1154,7 @@ var vars = {
                 vars.DEBUG ? console.log(`😀 ${validMoves.length} valid move(s) found`) : null;
                 vars.DEBUG ? console.log(validMoves) : null;
             } else {
-                console.log('😕 No valid moves were found!');
+                vars.DEBUG ? console.log('😕 No valid moves were found!') : null;
                 return false;
             }
 
@@ -1225,7 +1245,7 @@ var vars = {
         },
 
         restart: ()=> {
-            console.log(`Restart requested...`);
+            vars.DEBUG ? console.log(`Restart requested...`) : null;
             let aV = vars.animate;
             // send the player face back to start position
             aV.faceToStartPosition();
@@ -1270,13 +1290,13 @@ var vars = {
         },
 
         start: ()=> {
-            console.log('%c*********************\n*** Starting Game ***\n*********************', 'font-size: 16px; background-color: #004400; font-weight: bold;');
+            vars.DEBUG ? console.log('%c*********************\n*** Starting Game ***\n*********************', 'font-size: 16px; background-color: #004400; font-weight: bold;') : null;
             // hide all the options stuff
             vars.animate.showOptions(false);
         },
 
         takePiece: (_objectName, _bPos, _object)=> {
-            console.log(`Taking ${_objectName}`);
+            vars.DEBUG ? console.log(`Taking ${_objectName}`) : null;
             // we need a few variables here as we are gonna reset most of them
             let bPs = vars.boardPositions;
 
@@ -1388,7 +1408,7 @@ var vars = {
             scene.input.on('gameobjectdown', function (pointer, gameObject) {
                 let iV = vars.input;
                 if (iV.enabled===false) {
-                    console.log('Input is currently disabled.');
+                    vars.DEBUG ? console.log('Input is currently disabled.') : null;
                     return false;
                 }
 
@@ -1467,7 +1487,7 @@ var vars = {
 
                 if (vars.animate.hovering===null) { return false; }
 
-                console.log(`Moved away from a button (${oName}) - destroying its tween`);
+                vars.DEBUG ? console.log(`Moved away from a button (${oName}) - destroying its tween`) : null;
                 if (oName.includes('opt')) {
                     vars.animate.hovering.targets[0].setData('over', false).setScale(1);
                     vars.animate.hovering.stop();
@@ -1527,8 +1547,8 @@ var vars = {
                 vars.UI.changePlayerFace(gameObject);
             } else if (oName === 'optPlay') {
                 gameObject.disableInteractive();
-                // sand explosion
                 vars.input.clickedOn='optPlay';
+                // sand explosion
                 vars.particles.available.sandExplosion.emitters.list[0].setQuantity(512).setScale(0.2).setLifespan(2000);
                 vars.particles.available.sandExplosion.emitParticle();
                 // play menu ok sound
@@ -1544,7 +1564,7 @@ var vars = {
             } else if(oName==='volOptBG') {
                 vars.UI.showVolumeOptions();
             } else {
-                console.log(`🎮 Game object with name "${gameObject.name}" was clicked. No handler found.`);
+                vars.DEBUG ? console.log(`🎮 Game object with name "${gameObject.name}" was clicked. No handler found.`) : null;
             }
         },
 
@@ -1604,7 +1624,7 @@ var vars = {
                 if (comboName.includes('FORCE')) {
                     let force = comboName.replace('FORCE', '');
                     vars.force = force === 'OFF' ?  -1 : ~~(force);
-                    console.log(`Force has been set to ${force}`);
+                    vars.DEBUG ? console.log(`Force has been set to ${force}`) : null;
                     quickGet('dbgTextForce').setText(`Force: ${force}`);
                 } else if (comboName==='P1' || comboName==='P2') {
                     vars.player.current = ~~(comboName[1]);
@@ -1615,7 +1635,7 @@ var vars = {
 
         setEnabled: (_opt=true)=> {
             /* vars.input.enabled=!_opt;
-            console.log(`Input has been set to ${!_opt.toString()}`); */
+            vars.DEBUG ? console.log(`Input has been set to ${!_opt.toString()}`) : null; */
         }
 
     },
@@ -1626,7 +1646,7 @@ var vars = {
 
         init: function() {
             // particles are stored here
-            console.log('  .. 🎆 initialising particles and vars');
+            vars.DEBUG ? console.log('  .. 🎆 initialising particles and vars') : null;
 
             // sand hit
             vars.particles.diceGroundHitInit();
@@ -1727,14 +1747,14 @@ var vars = {
         },
 
         init: ()=> {
-            console.log('  ..initialising player vars');
+            vars.DEBUG ? console.log('  ..initialising player vars') : null;
             let cV = vars.player.counters;
             cV.white.atStart = Phaser.Utils.Array.NumberArray(1,6,'counterw_');
             cV.black.atStart = Phaser.Utils.Array.NumberArray(1,6,'counterb_');
         },
 
         betterLuckFn: ()=> {
-            console.log(' 🏋🎲...Better Luck Function');
+            vars.DEBUG ? console.log(' 🏋🎲...Better Luck Function') : null;
             return shuffle([1,2])[0] === 1 ? 'dice1' : frameName = shuffle(Phaser.Utils.Array.NumberArray(2,4,'dice'))[0];
         },
 
@@ -1747,21 +1767,21 @@ var vars = {
             let pName = `player${_player}`;
 
             if (pV.pointsTotal!==0) { // the the points total > 0
-                console.log(`Player didnt throw a zero. Resetting 0 protection and returning false`);
+                vars.DEBUG ? console.log(`Player didnt throw a zero. Resetting 0 protection and returning false`) : null;
                 pV.zeroProtected[pName]=false; // reset the zero protection
                 return false;
             }
 
             // is the current player zero protected?
             if (pV.zeroProtected[pName]) {
-                console.log(`🏋🎲 Player ${pV.current} is Zero Protected. Forcing a 1 and removing zero protection.`);
+                vars.DEBUG ? console.log(`🏋🎲 Player ${pV.current} is Zero Protected. Forcing a 1 and removing zero protection.`) : null;
                 // force a 1
                 pV.pointsTotal=1;
                 vars.phaserObject.quickGet('dice4').setFrame('dice1');
                 pV.zeroProtected[pName]=false;
             } else {
                 // player is NOT protected, so they should be protected for their next throw
-                console.log(`😇🍀 %cPlayer ${pV.current} wasnt zero protected. They are now.%c 🍀😇`, 'font-weight: bold; color: #008800; background-color: gold; font-size: 16px','');
+                vars.DEBUG ? console.log(`😇🍀 %cPlayer ${pV.current} wasnt zero protected. They are now.%c 🍀😇`, 'font-weight: bold; color: #008800; background-color: gold; font-size: 16px','') : null;
                 pV.zeroProtected[pName] = true;
             }
         },
@@ -1784,7 +1804,7 @@ var vars = {
                 // change the player face
                 vars.animate.changeFace();
             } else {
-                msg = `You landed on a free shot\n\nRoll the dice`;
+                msg = `You landed on a free shot\nRoll the dice`;
                 vars.audio.sentenceBuild('rollagain');
             }
 
@@ -1831,7 +1851,7 @@ var vars = {
         ◄████████████████████████►
         */
         init: ()=> {
-            console.log('  ..initialising the UI');
+            vars.DEBUG ? console.log('  ..initialising the UI') : null;
 
             vars.UI.initLogo();
             vars.UI.initOptionsScreen();
@@ -1874,7 +1894,9 @@ var vars = {
 
             // add game PLAYER FACES
             let pfPos = consts.positions.playerFace;
-            let pFace = scene.add.image(pfPos[0], pfPos[1], 'playerFaces', 'player1Face').setName('playerFace').setOrigin(0).setDepth(consts.depths.optionsScreen-2); // this depth changes when the game starts
+            // figure out which image set we need
+            let texture = vars.player.p1Face === 'female' ? 'playerFacesF': 'playerFaces';
+            let pFace = scene.add.image(pfPos[0], pfPos[1], texture, 'player1Face').setName('playerFace').setOrigin(0).setDepth(consts.depths.optionsScreen-2); // this depth changes when the game starts
             scene.tweens.add({ targets: pFace, y: pFace.y-25, yoyo: true, repeat: -1, duration: 500, ease: 'Quad' })
 
             // draw the background for the dice area
@@ -1919,7 +1941,8 @@ var vars = {
 
             // pop up bg
             scene.add.image(vars.canvas.cX, vars.canvas.cY, 'whitePixel').setName('popupBG').setTint('#000').setScale(vars.canvas.width, vars.canvas.height).setDepth(msgDepth-1).setAlpha(0);
-            scene.add.text(vars.canvas.cX, vars.canvas.cY, '...').setName('popupText').setColor('#ff0').setFontSize(96).setFontStyle('bold').setFontFamily('Consolas').setAlign('center').setAlpha(0).setDepth(msgDepth).setShadow(8,8,'#000',2);
+            //scene.add.text(vars.canvas.cX, vars.canvas.cY, '...').setName('popupText').setColor('#ff0').setFontSize(96).setFontStyle('bold').setFontFamily('Consolas').setAlign('center').setAlpha(0).setDepth(msgDepth).setShadow(8,8,'#000',2);
+            scene.add.bitmapText(vars.canvas.cX, vars.canvas.cY, 'defaultFont', '...', 128, 1).setAlpha(0).setName('popupText').setDepth(msgDepth).setOrigin(0.5);
 
             // barrier for a4
             vars.animate.initBarrier();
@@ -1961,7 +1984,7 @@ var vars = {
         },
 
         initVolumeOptions: ()=> {
-            console.log(`  .. 🔈🔉🔊 initialising Volume options`);
+            vars.DEBUG ? console.log(`  .. 🔈🔉🔊 initialising Volume options`) : null;
             let container = scene.containers.volumeOptions;
 
             // add a background
@@ -2018,7 +2041,7 @@ var vars = {
                     if (player===1 & aPos===imageArray.length-1) { aPos=1; }
                 }
             } else {
-                console.log(`Array position is invalid!`);
+                vars.DEBUG ? console.log(`Array position is invalid!`) : null;
                 return false;
             }
             frameName = imageArray[aPos];
@@ -2046,7 +2069,7 @@ var vars = {
             if (_p!==1 && _p!==2) { console.error(`Invalid player number (${_p})`); return false; }
             // it is. update the UI
             let icon = _p===1 ? '🦳' : '🦱';
-            console.log(`Next player is ${icon}`);
+            vars.DEBUG ? console.log(`Next player is ${icon}`) : null;
             vars.phaserObject.quickGet('playerText').setText(`Player ${_p}`)
         },
 

@@ -26,7 +26,7 @@ function isVar(searchFor='Phaser') {
     for(var q in window) { 
         if(window.hasOwnProperty(q) && q===searchFor) {
             message += `Found the variable '${searchFor}'`;
-            console.log(message);
+            vars.DEBUG ? console.log(message) : null;
             return true;
         }
     }

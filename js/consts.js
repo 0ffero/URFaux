@@ -20,7 +20,7 @@ const consts = {
                 let html = `#${colour.toString(16)}`;
                 html +=html.length===2 ? '00000' : '';
                 graysHTML.push(html);
-                console.log(`Added colour: ${html}`);
+                vars.DEBUG ? console.log(`Added colour: ${html}`) : null;
                 colour+=inc;
             }
             console.groupEnd();
