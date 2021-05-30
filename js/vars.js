@@ -1,7 +1,7 @@
 var vars = {
     DEBUG: false,
 
-    version: 0.977,
+    version: 0.978,
 
     clamp: Phaser.Math.Clamp,
 
@@ -480,6 +480,27 @@ var vars = {
                 yoyo: true, repeat: -1,
                 ease: 'Quad'
             }))
+        },
+
+        playButtonBG: ()=> {
+            let bg = vars.phaserObject.quickGet('playButtonBG');
+            let maxX = bg.width-290;
+            scene.tweens.addCounter({
+                from: 0,
+                to: maxX,
+                duration: 30000,
+                onUpdate: (_t, _v)=> {
+                    if (bg.alpha===1) {
+                        let x = ~~(bg.getData('x'));
+                        bg.setCrop(_v.value,0,290,140).setPosition(x-_v.value,bg.y);
+                        if (x>=maxX) { x=0; }
+                        if (bg.alpha===1 && _t.progress>=0.95) {
+                            bg.setCrop(0,0,290,140).setPosition(815,810);
+                            _t.restart();
+                        }
+                    }
+                }
+            });
         },
 
         pointsCount: (_p, _show=true)=> {
@@ -1920,10 +1941,12 @@ var vars = {
             let p1Image = scene.add.image(p1x, pY, 'options').setName('opt_p1i').setFrame('faceMale').setDepth(depth);
             let p2Image = scene.add.image(p2x, pY, 'options').setName('opt_p2i').setFrame('faceFemale').setDepth(depth);
             
-            let optPlay = scene.add.image(cV.cX, cV.height-200, 'options').setFrame('optPlay').setName('optPlay').setDepth(depth).setInteractive();
-            let optPlayText = scene.add.image(cV.cX, cV.height-200, 'options').setFrame('optPlayText').setName('optPlayText').setDepth(depth);
+            let optPlay = scene.add.image(cV.cX, cV.height-200, 'options').setFrame('optPlay').setName('optPlay').setDepth(depth+1).setInteractive();
+            let optPlayBG = scene.add.image(815, 810, 'playButtonBG').setOrigin(0).setCrop(0,0,290,140).setDepth(depth).setName('playButtonBG').setData({ x: 815 });
+            vars.animate.playButtonBG();
+            let optPlayText = scene.add.image(cV.cX, cV.height-200, 'options').setFrame('optPlayText').setName('optPlayText').setDepth(depth+2);
 
-            scene.groups.options.addMultiple([bg,p1Title,p2Title,p1Image,p2Image,optPlay,optPlayText]);
+            scene.groups.options.addMultiple([bg,p1Title,p2Title,p1Image,p2Image,optPlay,optPlayBG,optPlayText]);
 
             // add the 4 "select player" buttons
             let y = 300;
