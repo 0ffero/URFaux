@@ -1,13 +1,14 @@
 var vars = {
     DEBUG: false,
 
-    version: 0.98,
+    version: 0.991,
 
     clamp: Phaser.Math.Clamp,
 
     // APP
     animate: {
         popupWait: 0,
+        msgDuration: 0,
         shieldTween: false,
         hovering: null,
 
@@ -45,11 +46,7 @@ var vars = {
             let x = bPs[frameName].x; let y = bPs[frameName].y;
             _o[0].setFrame(frameName).setDepth(_o[0].depth-1);
             _o[0].setData({ boardPosition: '', x: x, y: y });
-            scene.tweens.add({
-                targets: _o[0],
-                alpha: 0,
-                duration: 500
-            })
+            scene.tweens.add({ targets: _o[0], alpha: 0, duration: 500 })
         },
 
         counterToEndPosition: (_oName)=> {
@@ -99,11 +96,7 @@ var vars = {
                 let counterName = gV.startingCounter;
                 let hideMe = vars.phaserObject.quickGet(counterName);
                 gV.startingCounter = '';
-                scene.tweens.add({
-                    targets: hideMe,
-                    alpha: 0,
-                    duration: consts.durations.counterMove
-                })
+                scene.tweens.add({ targets: hideMe, alpha: 0, duration: consts.durations.counterMove })
                 // and push it back into the starting array
                 let pC;
                 let counterIcon = '🞅';
@@ -146,9 +139,7 @@ var vars = {
                 let x = _m[1].x; let y = _m[1].y;
                 if (_i === total) { lastCounter[1] = true; }
                 scene.tweens.add({
-                    targets: _object,
-                    x: x, y: y,
-                    duration: dur, delay: _i*dur,
+                    targets: _object, x: x, y: y, duration: dur, delay: _i*dur,
                     onStart: ()=> {
                         vars.audio.playSound(shuffle(vars.audio.countersMove)[0]);
                     },
@@ -197,43 +188,9 @@ var vars = {
             // make a ptoooshhh noise
             vars.audio.playSound('sandHit');
 
-            // move the taken counter to the start position
-
             vars.animate.popupWait = duration*5;
 
-
-
             return false;
-            // ANYTHING AFTER HERE WAS THE ORIGINAL CODE
-            vars.DEBUG ? console.log(`Sending ${_cObject.name} to start position`) : null;
-            let path = vars.game.generateBackToStartPath(_cObject);
-
-            if (!path) {
-                 console.error('Unable to generate path for this counter!');
-                 console.log(`Name of counter ${_cObject.name}`);
-                 console.log(_cObject);
-                 return false;
-            }
-
-            // increase the counters depth so it moves above the other counters
-            _cObject.setDepth(_cObject.depth+1);
-            let bPs = vars.boardPositions;
-            let totalWait = 0;
-            path.forEach( (_dest, _i)=> {
-                let x = bPs[_dest].x; let y = bPs[_dest].y;
-
-                let oC = _i===path.length-1 ? vars.animate.counterFadeOut: null;
-                let dur = 125;
-                scene.tweens.add({
-                    targets: _cObject,
-                    x: x, y: y,
-                    duration: dur, // maximim duration will be 7 (attack squares when starting at a8) + 4 (starting squares) + 1 (when reaching the start square) * 125 = 1.5s
-                    delay: _i*dur,
-                    onComplete: oC
-                })
-                totalWait = _i*dur;
-            })
-            vars.animate.popupWait = totalWait;
         },
 
         counterUpdateFrame: (_t, _o, _lastCounter)=> {
@@ -272,8 +229,7 @@ var vars = {
             if (vars.DEBUG) { dur=0; }
             _targets.forEach( (_t,i)=>{
                 scene.tweens.add({
-                    targets: _t, scale: 0.75,
-                    duration: dur, delay: dur*i, ease: 'Quint.easeIn',
+                    targets: _t, scale: 0.75, duration: dur, delay: dur*i, ease: 'Quint.easeIn',
                     onComplete: ()=> { vars.audio.playSound('sandHit'); vars.particles.available.sand.emitParticleAt(_t.x, _t.y); }//vars.camera.shake(50);
                 })
             })
@@ -295,12 +251,7 @@ var vars = {
             // fade
             let alpha = _out ? 0.5 : 1;
             diceArray.forEach( (_d)=> {
-                scene.tweens.add({
-                    targets: _d,
-                    alpha: alpha,
-                    duration: 1000,
-                    delay: 1000
-                })
+                scene.tweens.add({ targets: _d, alpha: alpha, duration: 500, delay: 1000 })
             })
         },
 
@@ -323,21 +274,12 @@ var vars = {
         faceToStartPosition: ()=> {
             let pfPos = consts.positions.playerFace;
             let pf = vars.phaserObject.quickGet('playerFace');
-            scene.tweens.add({
-                targets: pf,
-                x: pfPos[0],
-                duration: 2000,
-                ease: 'Quad'
-            })
+            scene.tweens.add({ targets: pf, x: pfPos[0], duration: 2000, ease: 'Quad' })
         },
 
         fadeTheThing: (_object=null, _duration=1000)=> {
             if (_object===null) { return false; }
-            scene.tweens.add({
-                targets: _object,
-                alpha: 0,
-                duration: _duration
-            })
+            scene.tweens.add({ targets: _object, alpha: 0, duration: _duration })
         },
 
         initBarrier: ()=> {
@@ -438,11 +380,7 @@ var vars = {
                     // hide the progress bar
                     vars.DEBUG ? console.log(`🙈 🝙 Hiding the progress bar`) : null;
                     let box = vars.graphics.progress.box.object;
-                    scene.tweens.add({
-                        targets: [bar.object, box],
-                        alpha: 0,
-                        delay: 500, duration: 500
-                    })
+                    scene.tweens.add({ targets: [bar.object, box], alpha: 0, delay: 500, duration: 500 })
                 }
             } else {
                 if (vars.DEBUG !== true) { return false; } // DEBUG var is undefined for non devs
@@ -457,53 +395,32 @@ var vars = {
             let depth = consts.depths.loading;
             // fade out the loading text
             let oldText = vars.phaserObject.quickGet('loadingText');
-            scene.tweens.add({
-                targets: oldText, alpha: 0,
-                duration: duration,
-                onComplete: vars.phaserObject.destroy
-            })
+            scene.tweens.add({ targets: oldText, alpha: 0, duration: duration, onComplete: vars.phaserObject.destroy })
 
             // fade out the old loading image
             let oldImage = vars.phaserObject.quickGet('loadingBG');
-            scene.tweens.add({
-                targets: oldImage, alpha: 0,
-                duration: duration*2,
-                onComplete: vars.phaserObject.destroy
-            })
+            scene.tweens.add({ targets: oldImage, alpha: 0, duration: duration*2, onComplete: vars.phaserObject.destroy })
 
             // and show the new loaded image and start button
             let newImage = scene.add.image(vars.canvas.cX, 0, 'loadedBG').setOrigin(0.5,0).setName('loadedBG').setAlpha(0).setDepth(depth);
             let loadedButton = scene.add.image(vars.canvas.cX, vars.canvas.cY, 'loadedButton').setName('loadedButton').setAlpha(0).setDepth(depth+1).setInteractive();
             // fade in the loaded image
-            scene.tweens.add({
-                targets: newImage, alpha: 1,
-                duration: duration*2
-            })
+            scene.tweens.add({ targets: newImage, alpha: 1, duration: duration*2 })
 
-            scene.tweens.add({
-                targets: loadedButton, alpha: 1,
-                duration: duration*2, delay: duration*2
-            })
+            scene.tweens.add({ targets: loadedButton, alpha: 1, duration: duration*2, delay: duration*2 })
         },
 
         movableCounterBounce: (_o)=> {
             vars.DEBUG ? console.log(`    %c... bouncing movable counter with name ${_o.name}`, 'color: yellow') : null;
             vars.animate.bouncingCounters.push(scene.tweens.add({
-                targets: _o,
-                y: _o.y-20,
-                duration: 1000,
-                yoyo: true, repeat: -1,
-                ease: 'Quad'
+                targets: _o, y: _o.y-20, duration: 1000, yoyo: true, repeat: -1, ease: 'Quad'
             }))
         },
 
         playButtonBG: ()=> {
             let bg = vars.phaserObject.quickGet('playButtonBG');
             let maxX = bg.width-290;
-            scene.tweens.addCounter({
-                from: 0,
-                to: maxX,
-                duration: 30000,
+            scene.tweens.addCounter({ from: 0, to: maxX, duration: 30000,
                 onUpdate: (_t, _v)=> {
                     if (bg.alpha===1) {
                         let x = ~~(bg.getData('x'));
@@ -521,11 +438,7 @@ var vars = {
         pointsCount: (_p, _show=true)=> {
             if (_p===null) { _p=vars.phaserObject.quickGet('pointsCount'); } // when showing the points, the points text object is passed in, otherwise we have to grab it
             let alpha = _show === true ? 1 : 0;
-            scene.tweens.add({
-                targets: _p,
-                alpha: alpha,
-                diration: 500
-            })
+            scene.tweens.add({ targets: _p, alpha: alpha, diration: 500 })
         },
 
         randomiseDice: (_diceArray)=> {
@@ -574,23 +487,16 @@ var vars = {
             }
             let duration = consts.durations.popup;
             // MESSAGE TEXT
-            scene.tweens.add({
-                targets: msgText,
-                alpha: 1,
-                yoyo: yoyo, hold: hold, duration: duration*2, delay: delay,
-                ease: 'Power1'
-            })
+            scene.tweens.add({ targets: msgText, alpha: 1, yoyo: yoyo, hold: hold, duration: duration*2, delay: delay, ease: 'Power1' })
             // BACKGROUND
-            scene.tweens.add({
-                targets: bg,
-                alpha: 0.9,
-                yoyo: yoyo, hold: hold, duration: duration*2, delay: delay,
-                ease: 'Power1'
-            })
+            scene.tweens.add({ targets: bg, alpha: 0.9, yoyo: yoyo, hold: hold, duration: duration*2, delay: delay, ease: 'Power1' })
 
             if (_showFace) {
                 vars.animate.showPlayerFace(yoyo, hold, duration, delay);
             }
+
+            // we need the duration saved, so we can re-enable the dice
+            vars.animate.msgDuration = duration*2 + delay + hold;
         },
 
         showOptions: (_show=true)=> {
@@ -610,11 +516,7 @@ var vars = {
                     delay = _o.name==='opt_BG' ? delay : duration;
                 }
 
-                scene.tweens.add({
-                    targets: _o,
-                    alpha: alpha,
-                    duration: duration, delay: delay
-                })
+                scene.tweens.add({ targets: _o, alpha: alpha, duration: duration, delay: delay })
             })
         },
 
@@ -629,14 +531,7 @@ var vars = {
                 playerFace.setPosition(vars.canvas.cX, 0+200).setDepth(depth);
             }
 
-            scene.tweens.add({
-                targets: playerFace,
-                alpha: 1,
-                yoyo: _yoyo,
-                duration: _duration*2,
-                hold: _hold,
-                delay: _delay
-            })
+            scene.tweens.add({ targets: playerFace, alpha: 1, yoyo: _yoyo, duration: _duration*2, hold: _hold, delay: _delay })
         },
 
         startingCounter: (_cID, _moveTo) => {
@@ -644,11 +539,7 @@ var vars = {
             vars.DEBUG ? console.log(`  > Showing starter counter for ${playerColour}`) : null;
             let counter = vars.phaserObject.quickGet(_cID);
             counter.setData({ 'moveTo': _moveTo, 'moveFrom': _moveTo[0] + 'S' });
-            scene.tweens.add({
-                targets: counter,
-                alpha: 1,
-                duration: 333
-            })
+            scene.tweens.add({ targets: counter, alpha: 1, duration: 333 })
             vars.animate.movableCounterBounce(counter);
         },
 
@@ -667,11 +558,7 @@ var vars = {
         },
 
         vignetteShow: (_obj)=> {
-            scene.tweens.add({
-                targets: _obj,
-                alpha: 1,
-                duration : 3000
-            })
+            scene.tweens.add({ targets: _obj, alpha: 1, duration : 3000 })
         }
     },
 
@@ -963,10 +850,10 @@ var vars = {
                             // show some sort of error message and reset everything
                             vars.DEBUG ? console.log(`Player threw a 0. Showing pop up message`) : null;
                             let players = vars.player.getCurrent();
-                            let msg = `Player ${players[0]} threw a 0.\n\nPlayer ${players[1]}, please roll the dice.`;
-                            vars.UI.showMessage(msg);
+                            let msg = `Player ${players[0]} threw a 0.\nPlayer ${players[1]}, roll the dice.`;
                             // reset the player variables
                             vars.player.nextPlayer('skip');
+                            vars.UI.showMessage(msg, 2000, true);
                             return false;
                         }
 
@@ -980,8 +867,8 @@ var vars = {
                                 let currentPlayer = vars.player.getCurrent();
                                 // display message
                                 let msg = `Player ${currentPlayer[1]}, roll the dice.`;
-                                vars.UI.showMessage(msg);
-                                vars.player.nextPlayer('skip');
+                                vars.player.nextPlayer('skip'); // order matters here! as this func changes the current user which is required in show message
+                                vars.UI.showMessage(msg, 2000, true);
                             }, 4500)
 
                             return false;
@@ -1186,7 +1073,7 @@ var vars = {
                 pV.win = true;
                 let winner = pV.current;
                 pV.wins[winner]++;
-                vars.UI.showMessage(`PLAYER ${winner} WINS!`, -1, true);
+                vars.UI.showMessage(`Player ${winner} Wins!`, -1, true);
                 vars.animate.faceToCentre();
                 vars.audio.playerWinLose(winner);
                 return false;
@@ -1277,7 +1164,7 @@ var vars = {
             vars.UI.rollTextSwitch();
             // play dice roll sound
             vars.audio.playSound('diceShakeRoll');
-            setTimeout(()=> { vars.audio.rollDice();}, consts.durations.diceEndRoll);
+            setTimeout(()=> { vars.audio.rollDice();}, consts.durations.diceEndRoll); // this is the sound of the dice hitting the floor/whatever
 
             // animate the 4 dice
             let diceArray = vars.game.getDiceObjects();
@@ -1593,8 +1480,14 @@ var vars = {
 
         diceEnable: (_dice, _e=true)=> {
             if (_e===true) {
-                vars.DEBUG ? console.log('👍 🎮 Enabling input on all dice.') : null;
-                _dice.forEach( (_d)=> { _d.setInteractive(); })
+                if (vars.player.current===2 && vars.player.CPU) { // we dont enable the dice here if its the AI's shot
+                    // i was gonna rewrite the logic for this but it makes it confusing as to whats happening
+                    // so it stays like this
+                    // the dice is rolled from another function
+                } else {
+                    vars.DEBUG ? console.log('👍 🎮 Enabling input on all dice.') : null;
+                    _dice.forEach( (_d)=> { _d.setInteractive(); })
+                }
             } else {
                 vars.DEBUG ? console.log('🛑 🎮 Disabling input on all dice.') : null;
                 _dice.forEach( (_d)=> { _d.disableInteractive(); })
@@ -1822,8 +1715,18 @@ var vars = {
             // switch the roll text
             vars.UI.rollTextSwitch();
 
-            // enable the dice
-            vars.game.diceEnable();
+            setTimeout( ()=> {
+                vars.game.diceEnable();
+                vars.animate.msgDuration=0;
+            }, vars.animate.msgDuration);
+
+            setTimeout( ()=> {
+                console.clear();
+                // roll dice
+                if (vars.player.current===2 && vars.player.CPU) {
+                    vars.game.rollDice();
+                }
+            }, 3000);
 
 
             if (vars.DEBUG) {

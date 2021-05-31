@@ -2,12 +2,13 @@ vars.debugFN = {
     init: (totalTime)=> {
         let dbgBG = scene.add.image(vars.canvas.width, 0, 'whitePixel').setName('dbgBG').setDepth(consts.depths.debug-1).setScale(300,450).setAlpha(0.33).setOrigin(1,0);
 
-        let dbgTxt = scene.add.text(vars.canvas.width, 0, `DEBUG ON. Game version: ${vars.version}\nInitialisation took ${totalTime}ms`).setAlign('right').setName('debugText').setOrigin(1,0).setColor('#0').setDepth(consts.depths.debug);
-        let dbgXY = scene.add.text(vars.canvas.width, 190, `x: -1, y: -1`).setAlign('right').setName('debugXY').setOrigin(1,0).setColor('#0').setDepth(consts.depths.debug);
-        let dbgForce = scene.add.text(vars.canvas.width, 150, `Force: Disabled`).setAlign('right').setName('dbgTextForce').setOrigin(1,0).setColor('#0').setFontSize(24).setFontStyle('bold').setDepth(consts.depths.debug);
-        let playerDBG = scene.add.text(vars.canvas.width, 210, `Player 1: ${vars.player.p1Face}\nPlayer 2: ${vars.player.p2Face} (CPU: ${vars.player.CPU.toString()})`).setAlign('right').setName('playerDebugText').setOrigin(1,0).setColor('#0').setDepth(consts.depths.debug);
-        let overDBG = scene.add.text(vars.canvas.width, 280, `Over: N/A`).setAlign('right').setName('overDebugText').setOrigin(1,0).setColor('#0').setDepth(consts.depths.debug);
-        let overDataDBG = scene.add.text(vars.canvas.width, 300, `Data: N/A`).setAlign('right').setName('overDataDebugText').setOrigin(1,0).setColor('#0').setDepth(consts.depths.debug);
+        let x = vars.canvas.width-10;
+        let dbgTxt = scene.add.text(x, 0, `DEBUG ON. Game version: ${vars.version}\nInitialisation took ${totalTime}ms`).setAlign('right').setName('debugText').setOrigin(1,0).setColor('#0').setDepth(consts.depths.debug);
+        let dbgXY = scene.add.text(x, 190, `x: -1, y: -1`).setAlign('right').setName('debugXY').setOrigin(1,0).setColor('#0').setDepth(consts.depths.debug);
+        let dbgForce = scene.add.text(x, 150, `Force: Disabled`).setAlign('right').setName('dbgTextForce').setOrigin(1,0).setColor('#0').setFontSize(24).setFontStyle('bold').setDepth(consts.depths.debug);
+        let playerDBG = scene.add.text(x, 210, `Player 1: ${vars.player.p1Face}\nPlayer 2: ${vars.player.p2Face} (CPU: ${vars.player.CPU.toString()})`).setAlign('right').setName('playerDebugText').setOrigin(1,0).setColor('#0').setDepth(consts.depths.debug);
+        let overDBG = scene.add.text(x, 280, `Over: N/A`).setAlign('right').setName('overDebugText').setOrigin(1,0).setColor('#0').setDepth(consts.depths.debug);
+        let overDataDBG = scene.add.text(x, 300, `Data: N/A`).setAlign('right').setName('overDataDebugText').setOrigin(1,0).setColor('#0').setDepth(consts.depths.debug);
         scene.groups.debug.addMultiple([dbgXY, dbgTxt, dbgForce, dbgBG, playerDBG, overDBG, overDataDBG]);
         vars.debugFN.showDebugBoard();
 
@@ -83,7 +84,7 @@ vars.debugFN = {
 
     showDebugBoard:()=> {
         let positions = ['w4','w3','w2','w1','w6','w5','a1','a2','a3','a4','a5','a6','a7','a8','b4','b3','b2','b1','b6','b5'];
-        let xStart = x = 1660;
+        let xStart = x = 1650;
         let y = 60;
         let spacing = 35;
         let debugDepth = consts.depths.debug;
