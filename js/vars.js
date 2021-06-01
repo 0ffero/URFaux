@@ -22,9 +22,9 @@ var vars = {
         changeFace: ()=> {
             let player = vars.player.current;
             let pOb = vars.phaserObject.quickGet('playerFace');
-            //pOb.setTexture('playerFacesF','playerFaces2F')
-            let textureName = vars.player[`p${vars.player.current}Face`][0]==='f' ? 'playerFacesF': 'playerFaces';
-            let frameName = `player${player}Face`;
+            let textureName = 'options';
+            let frameName = 'face' + vars.player[`p${vars.player.current}Face`].capitalise();
+            //let frameName = `p${player}Face${vars.player[`p${player}`]}`;
             scene.tweens.add({ targets: pOb, alpha: 0, yoyo: true, onYoyo: (_t, _o)=> { _o.setTexture(textureName, frameName); }, duration: 500 })
         },
 
@@ -808,7 +808,7 @@ var vars = {
                 // i had to add a better luck system as 0 was being thrown, like, a lot
                 // chance of throwing a 1 is now 50f/50a;
                 // where as the original chances were 25f/75a
-                if (vars.player.betterLuck===true) {
+                if (vars.player.betterLuck) {
                     frameName = vars.player.betterLuckFn();
                 } else {
                     frameName = shuffle(Phaser.Utils.Array.NumberArray(1,4,'dice'))[0];
@@ -817,7 +817,7 @@ var vars = {
                 _object.setData('rollNumber', rollNumber);
                 _object.setFrame(frameName);
 
-                if (complete===true && rollNumber!==maxRolls) {
+                if (complete && rollNumber!==maxRolls) {
                     vars.animate.randomiseDice(_object);
                 } else if (rollNumber===maxRolls) {
                     vars.DEBUG ? console.log(`  ${_object.name} has rolled ${maxRolls} times`) : null;
@@ -946,11 +946,11 @@ var vars = {
                     foundEnd = true;
                 }
 
-                if (foundStart===true && foundEnd===false) {
+                if (foundStart && !foundEnd) {
                     counterPath.push([_p, bPs[_p]]);
                 }
 
-                if (_startPosition===_p && foundStart===false) {
+                if (_startPosition===_p && !foundStart) {
                     vars.DEBUG ? console.log('Found the start position') : null;
                     foundStart=true;
                 }
@@ -1009,7 +1009,7 @@ var vars = {
             let found = false;
             board.every( (_p, _i)=> { // CHECK EVERY BOARD POSITION FOR THIS PLAYERS COUNTERS
                 if (_p===ignoreFrom) { found=true; }
-                if (found===true) { return false; }
+                if (found) { return false; }
                 // then we can check each of the positions for a valid move
                 let takenByPlayer = bPs[_p].takenByPlayer;
                 let counterID = bPs[_p].counterName;
@@ -1076,7 +1076,7 @@ var vars = {
                 bP.counterName=cName;
             }
 
-            if (win===true) {
+            if (win) {
                 // show win message etc
                 pV.win = true;
                 let winner = pV.current;
@@ -1136,7 +1136,7 @@ var vars = {
         resetDiceData: (_o, _newGame=false)=> {
             _o.setData({ rollNumber: 0 })
             vars.DEBUG ? console.log(`  Die with name ${_o.name} has been reset.`) : null;
-            _newGame===false ? null : _o.setFrame('dice1');
+            !_newGame ? null : _o.setFrame('dice1');
         },
 
         restart: ()=> {
@@ -1197,7 +1197,7 @@ var vars = {
             let bPs = vars.boardPositions;
 
             let takenCounterObject = vars.phaserObject.quickGet(_objectName);
-            if (takenCounterObject===false) {
+            if (!takenCounterObject) {
                 console.error(`Object was NOT found!`);
                 return false;
             }
@@ -1409,13 +1409,13 @@ var vars = {
                 console.clear();
                 setTimeout( ()=> {
                     vars.input.clickedOn=null;
-                },100)
+                }, 100);
+
                 gameObject.disableInteractive();
                 // fade out the loaded screen and text
                 // then start the game
                 let bg = vars.phaserObject.quickGet('loadedBG');
                 let btn = vars.phaserObject.quickGet('loadedButton');
-                500;
                 let dur = vars.DEBUG ? 0 : 500;
                 scene.tweens.add({ targets: [bg,btn], alpha: 0, duration: dur, onComplete: vars.phaserObject.destroy })
 
@@ -1423,7 +1423,7 @@ var vars = {
                 vars.input.clickedOn = 'loadedButton';
                 vars.particles.available.sandExplosion.emitParticle();
                 // play menu ok sound - changed to sand hit to match particles
-                vars.audio.playSound('sandHit'); //menuOK
+                vars.audio.playSound('sandHit');
 
                 setTimeout( ()=> {
                     vars.init(3);
@@ -1436,7 +1436,7 @@ var vars = {
                 vars.animate.counterToNewPosition(gameObject);
             } else if (oName === 'popupBG') {
                 // this is the pop up background
-                if (vars.player.win===true) {
+                if (vars.player.win) {
                     // restart the game
                     vars.game.restart();
                 } else {
@@ -1476,12 +1476,12 @@ var vars = {
             let oldI = -1;
             let swap;
             let only = vars.player.current === 1 ? 'whiteCounters' : 'blackCounters'; // only needed when enabling counters
-            let doingText = _enable===true ? 'Enabling ' : 'Disabling ';
+            let doingText = _enable ? 'Enabling ' : 'Disabling ';
             ['blackCounters','whiteCounters'].forEach( (_cC, i)=> {
                 swap = false;
                 if (oldI!==i) { oldI=i; console.groupCollapsed(doingText + _cC); swap=true; }
                 scene.groups[_cC].children.each( (_c)=> {
-                    if (_enable===false) { // we are disabling the counters. Clear their data
+                    if (!_enable) { // we are disabling the counters. Clear their data
                         _c.setData({ moveTo: '', moveFrom: '', taking: '' })
                         _c.disableInteractive();
                     } else {
@@ -1491,12 +1491,12 @@ var vars = {
                         } 
                     }
                 });
-                if (swap===true) { console.groupEnd(); }
+                if (swap) { console.groupEnd(); }
             })
         },
 
         diceEnable: (_dice, _e=true)=> {
-            if (_e===true) {
+            if (_e) {
                 if (vars.player.current===2 && vars.player.CPU) { // we dont enable the dice here if its the AI's shot
                     // i was gonna rewrite the logic for this but it makes it confusing as to whats happening
                     // so it stays like this
@@ -1704,7 +1704,7 @@ var vars = {
         nextPlayer: (_anotherShot=false)=> {
             let pV = vars.player;
             let msg = '';
-            if (_anotherShot===false || _anotherShot==='skip') {
+            if (!_anotherShot || _anotherShot==='skip') {
                 // update the current player and text
                 pV.current = pV.current === 1 ? 2 : 1;
                 if (_anotherShot!=='skip') { msg = `Roll the dice`; }
@@ -1772,11 +1772,10 @@ var vars = {
         */
         init: ()=> {
             vars.DEBUG ? console.log('  ..initialising the UI') : null;
-
-            vars.UI.initLogo();
-            vars.UI.initOptionsScreen();
-
-            // the volume options are built in stage 2 from inside vars.containers
+            let uiV = vars.UI;
+            uiV.initLogo();
+            uiV.initOptionsScreen();
+            uiV.initVolumeOptions();
         },
 
         initErrorScreen: ()=> {
@@ -1815,8 +1814,7 @@ var vars = {
             // add game PLAYER FACES
             let pfPos = consts.positions.playerFace;
             // figure out which image set we need
-            let texture = vars.player.p1Face === 'female' ? 'playerFacesF': 'playerFaces';
-            let pFace = scene.add.image(pfPos[0], pfPos[1], texture, 'player1Face').setName('playerFace').setOrigin(0).setDepth(consts.depths.optionsScreen-2); // this depth changes when the game starts
+            let pFace = scene.add.image(pfPos[0], pfPos[1], 'options', 'faceMale').setName('playerFace').setScale(0.66).setOrigin(0).setDepth(consts.depths.optionsScreen-2); // this depth changes when the game starts
             scene.tweens.add({ targets: pFace, y: pFace.y-25, yoyo: true, repeat: -1, duration: 500, ease: 'Quad' })
 
             // draw the background for the dice area
@@ -1975,8 +1973,7 @@ var vars = {
                 switch (frameName) {
                     case 'faceFemale': vars.player.p2Face='female'; vars.player.CPU=false; break;
                     case 'faceMale':   vars.player.p2Face='male';   vars.player.CPU=false; break;
-                    case 'faceCPU':    vars.player.p2Face='female'; vars.player.CPU=true;  break;
-                    // faceCPU needs updating as we currently dont have a 2 tone version of the CPU yet. TODO
+                    case 'faceCPU':    vars.player.p2Face='CPU';    vars.player.CPU=true;  break;
                 }
             }
 

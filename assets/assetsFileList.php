@@ -20,7 +20,7 @@ function dirToArray($dir) {
     $cdir = scandir($dir);
     foreach ($cdir as $key => $value) {
         if (substr_count($value,'__orig')===0) {
-            if (!in_array($value,array(".",".."))) {
+            if (!in_array($value,array(".","..","__OLD"))) {
                 if (is_dir($dir . DIRECTORY_SEPARATOR . $value)) {
                     $result[$value] = dirToArray($dir . DIRECTORY_SEPARATOR . $value);
                 } else {

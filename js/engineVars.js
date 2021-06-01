@@ -15,55 +15,57 @@ vars.init = (stage=1)=> { // ENTRY POINT IS HERE
         v.camera.init();
         v.input.init();
         v.particles.init();
-        vars.UI.initErrorScreen();
+        v.UI.initErrorScreen();
     }
 
     if (stage===3) {
         v.UI.init();
         v.game.init();
         v.player.init();
+        let CPU = v.phaserObject.quickGet('optArrowLeft_p2i');
+        v.UI.changePlayerFace(CPU);
     }
     
     if (stage===4) {
         v.UI.initGameScreen();
-        vars.DEBUG ? vars.debugFN.attackLaneInit() : null;
+        v.DEBUG ? v.debugFN.attackLaneInit() : null;
     }
 }
 
 vars.boardPositions = {
     // white starting lane
     wS: { x: 1022, y: 184, takenByPlayer: 0, counterName: '' },
-    w1: { x: 917,  y: 230, takenByPlayer: 0, counterName: ''  },
-    w2: { x: 759,  y: 305, takenByPlayer: 0, counterName: ''  },
-    w3: { x: 577,  y: 386, takenByPlayer: 0, counterName: ''  },
-    w4: { x: 361,  y: 486, takenByPlayer: 0, counterName: ''  },
+    w1: { x: 917,  y: 230, takenByPlayer: 0, counterName: '' },
+    w2: { x: 759,  y: 305, takenByPlayer: 0, counterName: '' },
+    w3: { x: 577,  y: 386, takenByPlayer: 0, counterName: '' },
+    w4: { x: 361,  y: 486, takenByPlayer: 0, counterName: '' },
 
     // black starting lane
-    bS: { x: 1320, y: 337, takenByPlayer: 0, counterName: ''  },
-    b1: { x: 1210, y: 406, takenByPlayer: 0, counterName: ''  },
-    b2: { x: 1047, y: 517, takenByPlayer: 0, counterName: ''  },
-    b3: { x: 851,  y: 642, takenByPlayer: 0, counterName: ''  },
-    b4: { x: 603,  y: 808, takenByPlayer: 0, counterName: ''  },
+    bS: { x: 1320, y: 337, takenByPlayer: 0, counterName: '' },
+    b1: { x: 1210, y: 406, takenByPlayer: 0, counterName: '' },
+    b2: { x: 1047, y: 517, takenByPlayer: 0, counterName: '' },
+    b3: { x: 851,  y: 642, takenByPlayer: 0, counterName: '' },
+    b4: { x: 603,  y: 808, takenByPlayer: 0, counterName: '' },
 
     // attack lane
-    a1: { x: 468,  y: 626, takenByPlayer: 0, counterName: ''  },
-    a2: { x: 698,  y: 501, takenByPlayer: 0, counterName: ''  },
-    a3: { x: 886,  y: 400, takenByPlayer: 0, counterName: ''  },
-    a4: { x: 1046, y: 313, takenByPlayer: 0, counterName: ''  },
-    a5: { x: 1179, y: 242, takenByPlayer: 0, counterName: ''  },
-    a6: { x: 1290, y: 181, takenByPlayer: 0, counterName: ''  },
-    a7: { x: 1390, y: 127, takenByPlayer: 0, counterName: ''  },
-    a8: { x: 1477, y: 81 , takenByPlayer: 0, counterName: ''  },
+    a1: { x: 468,  y: 626, takenByPlayer: 0, counterName: '' },
+    a2: { x: 698,  y: 501, takenByPlayer: 0, counterName: '' },
+    a3: { x: 886,  y: 400, takenByPlayer: 0, counterName: '' },
+    a4: { x: 1046, y: 313, takenByPlayer: 0, counterName: '' },
+    a5: { x: 1179, y: 242, takenByPlayer: 0, counterName: '' },
+    a6: { x: 1290, y: 181, takenByPlayer: 0, counterName: '' },
+    a7: { x: 1390, y: 127, takenByPlayer: 0, counterName: '' },
+    a8: { x: 1477, y: 81 , takenByPlayer: 0, counterName: '' },
 
     // white winning lane
-    w5: { x: 1352, y:  35, takenByPlayer: 0, counterName: ''  },
-    w6: { x: 1260, y:  76, takenByPlayer: 0, counterName: ''  },
-    wE: { x: 1152, y: 127, takenByPlayer: 0, counterName: []  },
+    w5: { x: 1352, y:  35, takenByPlayer: 0, counterName: '' },
+    w6: { x: 1260, y:  76, takenByPlayer: 0, counterName: '' },
+    wE: { x: 1152, y: 127, takenByPlayer: 0, counterName: [] },
 
     // black winning lane
-    b5: { x: 1626, y: 132, takenByPlayer: 0, counterName: ''  },
-    b6: { x: 1547, y: 187, takenByPlayer: 0, counterName: ''  },
-    bE: { x: 1457, y: 255, takenByPlayer: 0, counterName: []  },
+    b5: { x: 1626, y: 132, takenByPlayer: 0, counterName: '' },
+    b6: { x: 1547, y: 187, takenByPlayer: 0, counterName: '' },
+    bE: { x: 1457, y: 255, takenByPlayer: 0, counterName: [] }
 }
 
 vars.canvas = {
@@ -79,9 +81,6 @@ vars.containers = {
         let volCon = scene.containers.volumeOptions = scene.add.container().setName('volumeOptions').setData('visible', false);
         volCon.setPosition(0,vars.canvas.height-200);
         volCon.setDepth(254);
-
-        // now add the vol options
-        vars.UI.initVolumeOptions();
     }
 }
 
@@ -149,9 +148,6 @@ vars.files = {
             scene.load.atlas('dice',           'images/dice.png',          'images/dice.json');
             scene.load.atlas('options',        'images/optionImages.png',  'images/optionImages.json');
             scene.load.atlas('optionsVolume',  'images/optionsVolume.png', 'images/optionsVolume.json');
-            scene.load.atlas('playerFaces',    'images/playerFaces.png',   'images/playerFaces.json');
-            scene.load.atlas('playerFacesF',   'images/playerFacesF.png',  'images/playerFacesF.json');
-            scene.load.atlas('playerFacesC',   'images/playerFacesC.png',  'images/playerFacesC.json');
             scene.load.atlas('fullScreenBtn',  'images/screenMaxMin.png',  'images/screenMaxMin.json');
 
             // particles

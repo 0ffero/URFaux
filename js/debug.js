@@ -76,7 +76,7 @@ vars.debugFN = {
                 console.log(_c.name);
                 console.log(_c.data.list);
             });
-            if (swap===true) {
+            if (swap) {
                 console.groupEnd();
             }
         })
