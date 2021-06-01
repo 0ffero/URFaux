@@ -152,6 +152,7 @@ vars.files = {
             scene.load.atlas('playerFaces',    'images/playerFaces.png',   'images/playerFaces.json');
             scene.load.atlas('playerFacesF',   'images/playerFacesF.png',  'images/playerFacesF.json');
             scene.load.atlas('playerFacesC',   'images/playerFacesC.png',  'images/playerFacesC.json');
+            scene.load.atlas('fullScreenBtn',  'images/screenMaxMin.png',  'images/screenMaxMin.json');
 
             // particles
             scene.load.image('sandParticleImage', 'particles/whiteSmall.png');

@@ -1,7 +1,7 @@
 var vars = {
     DEBUG: false,
 
-    version: 0.991,
+    version: '0.99.ɑ1',
 
     clamp: Phaser.Math.Clamp,
 
@@ -608,6 +608,18 @@ var vars = {
             vars.audio.streamPlaying = true;
         },
 
+        mute: ()=> {
+            if (scene.sound.mute) {
+                scene.sound.setMute(false);
+                vars.audio.howlerStream.mute(false);
+                scene.containers.volumeOptions.getByName('gfx_volBar').clearTint();
+            } else {
+                scene.sound.setMute(true);
+                vars.audio.howlerStream.mute(true);
+                scene.containers.volumeOptions.getByName('gfx_volBar').setTint(0x888888);
+            }
+        },
+
         playSound: function(_key) {
             vars.DEBUG ? console.log(`🎵 Playing audio with name ${_key}`) : null;
             scene.sound.play(_key);
@@ -730,11 +742,7 @@ var vars = {
 
             vars.audio.volumeSet();
 
-            scene.tweens.add({
-                targets: volBar,
-                scaleX: thisWidth,
-                duration: 200
-            })
+            scene.tweens.add({ targets: volBar, scaleX: thisWidth, duration: 200 })
             // MAKE SURE THIS LINE WORKS!
             scene.sound.volume = vV.phaser;
         }
@@ -850,7 +858,7 @@ var vars = {
                             // show some sort of error message and reset everything
                             vars.DEBUG ? console.log(`Player threw a 0. Showing pop up message`) : null;
                             let players = vars.player.getCurrent();
-                            let msg = `Player ${players[0]} threw a 0.\nPlayer ${players[1]}, roll the dice.`;
+                            let msg = `Player ${players[1]}, roll the dice.`;
                             // reset the player variables
                             vars.player.nextPlayer('skip');
                             vars.UI.showMessage(msg, 2000, true);
@@ -1168,6 +1176,7 @@ var vars = {
 
             // animate the 4 dice
             let diceArray = vars.game.getDiceObjects();
+            diceArray.forEach( (_d)=> { _d.setAlpha(1); })
             vars.input.diceEnable(diceArray, false);
             console.groupCollapsed('🎲 Rolling the Dice')
             vars.animate.randomiseDice(diceArray);
@@ -1255,6 +1264,10 @@ var vars = {
 
         grayScaleObject: ()=> {
             scene.plugins.get('rexgrayscalepipelineplugin').add(gameObject, { intensity: 1 });
+        },
+
+        helpPage: ()=> {
+            
         },
 
         highlightObject: (_oName)=> {
@@ -1448,8 +1461,12 @@ var vars = {
                     case 'volumeDown': vars.audio.volumeChange(false); break;
                     case 'volumeUp': vars.audio.volumeChange(true); break;
                 }
-            } else if(oName==='volOptBG') {
+            } else if (oName==='volOptBG') {
                 vars.UI.showVolumeOptions();
+            } else if (oName==='volMute') {
+                vars.audio.mute();
+            } else if (oName==='minMaxButton') {
+                if (scene.scale.isFullscreen) { gameObject.setFrame('maxButton'); scene.scale.stopFullscreen(); } else { gameObject.setFrame('minButton'); scene.scale.startFullscreen(); }
             } else {
                 vars.DEBUG ? console.log(`🎮 Game object with name "${gameObject.name}" was clicked. No handler found.`) : null;
             }
@@ -1893,20 +1910,23 @@ var vars = {
             // add a background
             let bg = scene.add.image(0,0,'whitePixel').setName('volOptBG').setScale(vars.canvas.width, 200).setTint(0x0).setAlpha(0.8).setOrigin(0).setInteractive();
             // add the 3 volume buttons
-            volMute = scene.add.image(100, 100, 'optionsVolume').setFrame('volumeMute').setName('volumeMute').setInteractive();
-            volDown = scene.add.image(250, 100, 'optionsVolume').setFrame('volumeDown').setName('volumeDown').setInteractive();
-            volUp = scene.add.image(400, 100, 'optionsVolume').setFrame('volumeUp').setName('volumeUp').setInteractive();
+            let volMute = scene.add.image(100, 100, 'optionsVolume').setFrame('volumeMute').setName('volMute').setInteractive();
+            let volDown = scene.add.image(250, 100, 'optionsVolume').setFrame('volumeDown').setName('volumeDown').setInteractive();
+            let volUp = scene.add.image(400, 100, 'optionsVolume').setFrame('volumeUp').setName('volumeUp').setInteractive();
 
             let w = 620; let h = 70;
             let x = 550; let y = 100;
-            volbarBG = scene.add.image(x, y, 'whitePixel').setTint(0x0000B2).setName('gfx_volBarBG').setScale(w,h).setOrigin(0,0.5);
+            let volbarBG = scene.add.image(x, y, 'whitePixel').setTint(0x0000B2).setName('gfx_volBarBG').setScale(w,h).setOrigin(0,0.5);
 
             w = 600; h = 50;
             w*=vars.audio.volume.phaser;
-            volbar = scene.add.image(x+10, y, 'whitePixel').setTint(0x31D2F7).setName('gfx_volBar').setScale(w,h).setOrigin(0,0.5);
+            let volbar = scene.add.image(x+10, y, 'whitePixel').setTint(0x31D2F7).setName('gfx_volBar').setScale(w,h).setOrigin(0,0.5);
+
+            // min/max button
+            let minMax = scene.add.image(vars.canvas.width-10, y, 'fullScreenBtn').setName('minMaxButton').setFrame('maxButton').setOrigin(1,0.5).setInteractive();
 
             // add everything to the container
-            container.add([bg,volMute,volDown,volUp,volbarBG, volbar]);
+            container.add([bg,volMute,volDown,volUp,volbarBG, volbar, minMax]);
             setTimeout( ()=> { vars.UI.showVolumeOptions(false); }, 1000)
 
         },

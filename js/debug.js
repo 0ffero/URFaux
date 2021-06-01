@@ -3,7 +3,7 @@ vars.debugFN = {
         let dbgBG = scene.add.image(vars.canvas.width, 0, 'whitePixel').setName('dbgBG').setDepth(consts.depths.debug-1).setScale(300,450).setAlpha(0.33).setOrigin(1,0);
 
         let x = vars.canvas.width-10;
-        let dbgTxt = scene.add.text(x, 0, `DEBUG ON. Game version: ${vars.version}\nInitialisation took ${totalTime}ms`).setAlign('right').setName('debugText').setOrigin(1,0).setColor('#0').setDepth(consts.depths.debug);
+        let dbgTxt = scene.add.text(x, 0, `DEBUG ON. Version: ${vars.version}\nInitialisation took ${totalTime}ms`).setAlign('right').setName('debugText').setOrigin(1,0).setColor('#0').setDepth(consts.depths.debug);
         let dbgXY = scene.add.text(x, 190, `x: -1, y: -1`).setAlign('right').setName('debugXY').setOrigin(1,0).setColor('#0').setDepth(consts.depths.debug);
         let dbgForce = scene.add.text(x, 150, `Force: Disabled`).setAlign('right').setName('dbgTextForce').setOrigin(1,0).setColor('#0').setFontSize(24).setFontStyle('bold').setDepth(consts.depths.debug);
         let playerDBG = scene.add.text(x, 210, `Player 1: ${vars.player.p1Face}\nPlayer 2: ${vars.player.p2Face} (CPU: ${vars.player.CPU.toString()})`).setAlign('right').setName('playerDebugText').setOrigin(1,0).setColor('#0').setDepth(consts.depths.debug);
