@@ -1,0 +1,183 @@
+{
+	"frames": [
+		{
+			"filename": "cloudL1",
+			"frame": {
+				"x": 1,
+				"y": 1,
+				"w": 1700,
+				"h": 834
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 1700,
+				"h": 834
+			},
+			"sourceSize": {
+				"w": 1700,
+				"h": 834
+			}
+		},
+		{
+			"filename": "cloudL2",
+			"frame": {
+				"x": 1,
+				"y": 837,
+				"w": 1065,
+				"h": 785
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 1065,
+				"h": 785
+			},
+			"sourceSize": {
+				"w": 1065,
+				"h": 785
+			}
+		},
+		{
+			"filename": "cloudL3",
+			"frame": {
+				"x": 1068,
+				"y": 837,
+				"w": 1300,
+				"h": 649
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 1300,
+				"h": 649
+			},
+			"sourceSize": {
+				"w": 1300,
+				"h": 649
+			}
+		},
+		{
+			"filename": "cloudL4",
+			"frame": {
+				"x": 1068,
+				"y": 1488,
+				"w": 1350,
+				"h": 669
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 1350,
+				"h": 669
+			},
+			"sourceSize": {
+				"w": 1350,
+				"h": 669
+			}
+		},
+		{
+			"filename": "cloudL5",
+			"frame": {
+				"x": 2370,
+				"y": 1,
+				"w": 1431,
+				"h": 843
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 1431,
+				"h": 843
+			},
+			"sourceSize": {
+				"w": 1431,
+				"h": 843
+			}
+		},
+		{
+			"filename": "cloudS1",
+			"frame": {
+				"x": 2370,
+				"y": 846,
+				"w": 759,
+				"h": 526
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 759,
+				"h": 526
+			},
+			"sourceSize": {
+				"w": 759,
+				"h": 526
+			}
+		},
+		{
+			"filename": "cloudS2",
+			"frame": {
+				"x": 3131,
+				"y": 846,
+				"w": 886,
+				"h": 618
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 886,
+				"h": 618
+			},
+			"sourceSize": {
+				"w": 886,
+				"h": 618
+			}
+		},
+		{
+			"filename": "cloudS3",
+			"frame": {
+				"x": 2420,
+				"y": 1466,
+				"w": 923,
+				"h": 637
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 923,
+				"h": 637
+			},
+			"sourceSize": {
+				"w": 923,
+				"h": 637
+			}
+		}
+	],
+	"meta": {
+		"app": "http://www.codeandweb.com/texturepacker",
+		"version": "1.0",
+		"image": "clouds.png",
+		"format": "RGBA8888",
+		"size": {
+			"w": 4018,
+			"h": 2158
+		},
+		"scale": "1"
+	}
+}

@@ -1,7 +1,7 @@
 var vars = {
     DEBUG: false,
 
-    version: '0.99.ɑ1',
+    version: '0.99.ɑ2',
 
     clamp: Phaser.Math.Clamp,
 
@@ -22,21 +22,20 @@ var vars = {
         changeFace: ()=> {
             let player = vars.player.current;
             let pOb = vars.phaserObject.quickGet('playerFace');
-            let textureName = 'options';
-            let frameName = 'face' + vars.player[`p${vars.player.current}Face`].capitalise();
-            //let frameName = `p${player}Face${vars.player[`p${player}`]}`;
-            scene.tweens.add({ targets: pOb, alpha: 0, yoyo: true, onYoyo: (_t, _o)=> { _o.setTexture(textureName, frameName); }, duration: 500 })
+            let frameName = 'face' + vars.player[`p${player}Face`].capitalise();
+            scene.tweens.add({ targets: pOb, alpha: 0, yoyo: true, onYoyo: (_t, _o)=> { _o.setTexture('options', frameName); }, duration: 500 })
         },
 
         counterBounceTweensStop: ()=> {
             if (vars.DEBUG) { console.log(`💀 Killing bounce tweens.`); }
-            vars.animate.bouncingCounters.forEach( (_bC)=> {
+            let aV = vars.animate;
+            aV.bouncingCounters.forEach( (_bC)=> {
                 let obj = _bC.targets[0];
                 _bC.stop(); // stop the bounce animation
                 let x = obj.getData('x'); let y = obj.getData('y');
                 obj.setPosition(x,y); // place the object in its original spot
             })
-            vars.animate.bouncingCounters = [];
+            aV.bouncingCounters = [];
         },
 
         counterFadeOut: (_t,_o)=> {
@@ -63,9 +62,10 @@ var vars = {
             let xOffset = col === 'b' ? -20: 0;
 
             // set the counters depth based on the amount of counters at end position
-            let completed = vars.player.counters[colName].completed.length;
+            let pV = vars.player;
+            let completed = pV.counters[colName].completed.length;
             // update the completed var
-            vars.player.counters[colName].completed.push(_oName);
+            pV.counters[colName].completed.push(_oName);
 
             // figure out the counters final depth after move
             let depth = consts.depths.countersComplete + completed;
@@ -77,9 +77,7 @@ var vars = {
             let counterYDrop = maxDrop - (completed * 10)
             // and animate
             scene.tweens.add({
-                targets: ctr,
-                x: ctr.x+xOffset, y: ctr.y+counterYDrop,
-                duration: 500,
+                targets: ctr, x: ctr.x+xOffset, y: ctr.y+counterYDrop, duration: 500,
                 onComplete: (_t, _o)=> { _o[0].setDepth(~~(_o[0].getData('finalDepth'))); _o[0].data.remove('finalDepth'); }
             })
         },
@@ -153,8 +151,9 @@ var vars = {
             // however, now that ive implemented particles, im gonna use them instead for 2 reasons.
             // 1) The current back to start needs work to get the correct frame for each position (a simple fix but it simply isnt pretty)
             // 2) Particles are prettier and give the impression of actually smashing a piece back to the start position
-            vars.input.clickedOn=_cObject.name;
-            let colour = vars.input.clickedOn.replace('counter','')[0];
+            let iV = vars.input;
+            iV.clickedOn=_cObject.name;
+            let colour = iV.clickedOn.replace('counter','')[0];
             let startPosition = colour === 'w' ? vars.boardPositions[`wS`] : vars.boardPositions[`bS`];
             let data =  { boardPosition: '', moveFrom: '', moveTo: '', taking: '', x: startPosition.x, y: startPosition.y }
             _cObject.setData(data);
@@ -166,7 +165,8 @@ var vars = {
             }
 
             // if we get here we have a size and position of the counter
-            let particleCount = vars.particles.getParticleCount(sizeAndPos);
+            let pV = vars.particles;
+            let particleCount = pV.getParticleCount(sizeAndPos);
             if (!Number.isInteger(particleCount) || particleCount<1) {
                 console.error(`Invalid particle count returned!`);
                 return false;
@@ -179,16 +179,17 @@ var vars = {
 
             // fade out the counter thats being taken
             let duration = 100;
-            vars.animate.fadeTheThing(_cObject, duration);
+            let aV = vars.animate;
+            aV.fadeTheThing(_cObject, duration);
             // and move it back to its start position
             setTimeout( ()=> { _cObject.setPosition(startPosition.x, startPosition.y).setFrame(`${colour}S`); }, duration*2);
             // create the explosion of sand
-            vars.particles.available.sandExplosion.emitters.list[0].setQuantity(particleCount).setScale(0.3).setLifespan(1000);
-            vars.particles.available.sandExplosion.emitParticle();
+            pV.available.sandExplosion.emitters.list[0].setQuantity(particleCount).setScale(0.3).setLifespan(1000);
+            pV.available.sandExplosion.emitParticle();
             // make a ptoooshhh noise
             vars.audio.playSound('sandHit');
 
-            vars.animate.popupWait = duration*5;
+            aV.popupWait = duration*5;
 
             return false;
         },
@@ -212,10 +213,11 @@ var vars = {
                 object.setData({ boardPosition: bPos, moveFrom: '', moveTo: '', x: x, y: y });
                 // IF TAKING IS NOT EMPTY, TAKE THE PIECE. WE NEED TO DO THIS BEFORE UPDATING THE BOARD FOR THE ATTACKING PLAYER
                 let taking = object.getData('taking');
+                let gV = vars.game;
                 if (taking!=='') { 
-                    vars.game.takePiece(taking, bPos, object); // this function will need to request move complete after finishing! IMPORTANT TODO
+                    gV.takePiece(taking, bPos, object); // this function will need to request move complete after finishing! IMPORTANT TODO
                 } else {
-                    vars.game.moveComplete(object, bPos);
+                    gV.moveComplete(object, bPos);
                 }
 
                 // disable all counters
@@ -230,7 +232,7 @@ var vars = {
             _targets.forEach( (_t,i)=>{
                 scene.tweens.add({
                     targets: _t, scale: 0.75, duration: dur, delay: dur*i, ease: 'Quint.easeIn',
-                    onComplete: ()=> { vars.audio.playSound('sandHit'); vars.particles.available.sand.emitParticleAt(_t.x, _t.y); }//vars.camera.shake(50);
+                    onComplete: ()=> { vars.audio.playSound('sandHit'); vars.particles.available.sand.emitParticleAt(_t.x, _t.y); }
                 })
             })
 
@@ -289,7 +291,8 @@ var vars = {
             // set the shields data
             a.setData({ h: 0, rev: false, currentDelay: delay, maxDelay: delay });
 
-            vars.animate.shieldTween = scene.tweens.add({
+            let aV = vars.animate;
+            aV.shieldTween = scene.tweens.add({
                 targets: a, alpha: 1,
                 yoyo: true, repeat: -1,
                 duration: 500,
@@ -319,7 +322,7 @@ var vars = {
 
             setTimeout( ()=> {
                 // sometimes, if debug is on, a4 will be taken (basically used for testing), otherwise hide the shield
-                if (vars.boardPositions.a4.takenByPlayer===0) {vars.animate.showBarrier(false, true); }
+                if (vars.boardPositions.a4.takenByPlayer===0) { aV.showBarrier(false, true); }
             }, 750)
 
             //let b = scene.add.image(1047, 251, 'shielded').setName('shield_2').setDepth(depth).setAlpha(1).setTint(0x008000).setVisible(false);
@@ -339,7 +342,8 @@ var vars = {
             }
 
             let fSName = _fileData.src.replace(/assets(\/\w+){1,2}\//,'');
-            let fFV = vars.files.fileSizes;
+            let fV = vars.files;
+            let fFV = fV.fileSizes;
             let fS = fFV.files;
             let before = fFV.details.loadedSize;
             let tot = fFV.details.totalSize;
@@ -349,7 +353,7 @@ var vars = {
                 fFV.details.loadedSize+=fS[fSName];
                 // convert it to a percentage
                 let loadedPercent = Phaser.Math.Clamp(~~(fFV.details.loadedSize/tot*100)/100, 0.01, 1);
-                vars.files.loaded = loadedPercent;
+                fV.loaded = loadedPercent;
                 let kb = true;
                 let logText = kb ? `${~~(loadedPercent*100).toLocaleString()}% - Loaded ${fSName}. (Adding: ${(fS[fSName]/1000).toLocaleString()}KB to ${(before/1000).toLocaleString()}KB = ${(fFV.details.loadedSize/1000).toLocaleString()}KB of ${(tot/1000).toLocaleString()}KB)` : `${~~(loadedPercent*100)}% - Loaded ${fSName}. (Adding: ${(fS[fSName]).toLocaleString()} to ${before.toLocaleString()} = ${fFV.details.loadedSize.toLocaleString()} of ${tot.toLocaleString()})`;
                 // console loading bar
@@ -372,7 +376,7 @@ var vars = {
                     vars.DEBUG ? console.log(`Finished loading files.`) : null;
                     if (loadedPercent!==1) {
                         console.warn(` - All files loaded but the file list still has unloaded assets in it.`);
-                        console.table(vars.files.fileSizes.files);
+                        console.table(fFV.files);
                     }
                 }
 
@@ -402,8 +406,9 @@ var vars = {
             scene.tweens.add({ targets: oldImage, alpha: 0, duration: duration*2, onComplete: vars.phaserObject.destroy })
 
             // and show the new loaded image and start button
-            let newImage = scene.add.image(vars.canvas.cX, 0, 'loadedBG').setOrigin(0.5,0).setName('loadedBG').setAlpha(0).setDepth(depth);
-            let loadedButton = scene.add.image(vars.canvas.cX, vars.canvas.cY, 'loadedButton').setName('loadedButton').setAlpha(0).setDepth(depth+1).setInteractive();
+            let cV = vars.canvas;
+            let newImage = scene.add.image(cV.cX, 0, 'loadedBG').setOrigin(0.5,0).setName('loadedBG').setAlpha(0).setDepth(depth);
+            let loadedButton = scene.add.image(cV.cX, cV.cY, 'loadedButton').setName('loadedButton').setAlpha(0).setDepth(depth+1).setInteractive();
             // fade in the loaded image
             scene.tweens.add({ targets: newImage, alpha: 1, duration: duration*2 })
 
@@ -472,12 +477,14 @@ var vars = {
         },
 
         showMessage: (_msg, _dur, _showFace=false)=> { // variables have already been confirmed by this point
-            let delay = vars.animate.popupWait;
-            vars.animate.popupWait=0;
+            let aV = vars.animate;
+            let delay = aV.popupWait;
+            aV.popupWait=0;
             vars.DEBUG ? console.log(`Generating pop up`) : null;
-            let bg = vars.phaserObject.quickGet('popupBG');
+            let qg = vars.phaserObject.quickGet;
+            let bg = qg('popupBG');
             // set the message
-            let msgText = vars.phaserObject.quickGet('popupText');
+            let msgText = qg('popupText');
             msgText.setText(_msg).setOrigin(0.5);
 
             // now animate the popup
@@ -492,11 +499,11 @@ var vars = {
             scene.tweens.add({ targets: bg, alpha: 0.9, yoyo: yoyo, hold: hold, duration: duration*2, delay: delay, ease: 'Power1' })
 
             if (_showFace) {
-                vars.animate.showPlayerFace(yoyo, hold, duration, delay);
+                aV.showPlayerFace(yoyo, hold, duration, delay);
             }
 
             // we need the duration saved, so we can re-enable the dice
-            vars.animate.msgDuration = duration*2 + delay + hold;
+            aV.msgDuration = duration*2 + delay + hold;
         },
 
         showOptions: (_show=true)=> {
@@ -562,7 +569,208 @@ var vars = {
         }
     },
 
+    atmos: {
+        clouds: { big: [], small: []},
+        stormDistance: -1,
+        bigCloudsSeen: 0,
+        timer: false,
+
+        init: ()=> {
+            vars.DEBUG ? console.log(`  .. 🌤 initialising atmospherics`) : null;
+            let aV = vars.atmos;
+            let depth = consts.depths.weather;
+            aV.clouds.big = Phaser.Utils.Array.NumberArray(1,5,'cloudL');
+            aV.clouds.small = Phaser.Utils.Array.NumberArray(1,3,'cloudS');
+            scene.add.image(-vars.canvas.width, vars.canvas.cY, 'clouds', 'cloudL2').setName('rndCloud').setDepth(depth).setTint(0x0).setAlpha(0.4); // this is just placed off to the left of the screen
+            let cV = vars.canvas;
+            scene.add.image(cV.cX, cV.cY, 'whitePixel').setName('darker').setScale(cV.width, cV.height).setTint(0x0).setAlpha(0).setDepth(depth);
+
+            // start the animation
+            vars.atmos.updateCloud();
+        },
+
+        initRain: ()=> { // this is a particle effect, incase youre wondering where the code is...
+
+        },
+
+        generateCloud: (_object=null)=> {
+            if (_object===null) {
+                console.error(`You need to pass the cloud into this function... idiot.`);
+                return false;
+            }
+            let rndInt = Phaser.Math.RND;
+            let cloud = _object;
+            let w = cloud.width;
+
+            // flip x/y
+            let fX = rndInt.between(0,1) === 0 ? false : true;
+            cloud.setFlipX(fX).setFlipY(!fX);
+
+            // place the cloud off to the left of the screen
+            let randomOffset = rndInt.between(2, 5)*100;
+            let h = vars.canvas.height;
+            // generate start y and end y
+            let y = [rndInt.between(0,h), rndInt.between(0,h)];
+            cloud.setPosition(-w-randomOffset, y[0]);
+
+            // get a random scale offset
+            let rN = rndInt.integerInRange(1,2)/10;
+            cloud.setScale(1-(rN*2));
+
+            // get the end x for the animation
+            let endX = vars.canvas.width + w + randomOffset;
+            // get a duration to the nearest 10s for the cloud animation
+            let duration = rndInt.between(3,6)*10000;
+            scene.tweens.add({
+                targets: cloud, duration: duration, scale: 1+(rN*2), rotation: Math.PI*rN, x: endX, y: y[1],
+                onComplete: (_t, _o)=> { vars.atmos.updateCloud(); }
+            })
+        },
+
+        getRandomCloud: (_cS=false)=> {
+            if (!_cS) {
+                console.error(`You have to pass in the cloud set... you know what you are.`);
+                return false;
+            }
+            return shuffle(vars.atmos.clouds[_cS])[0];
+        },
+
+        lightningStrike: ()=> {
+            // start the timer if it hasnt been
+            console.log(`Lightning Strike`);
+            vars.camera.mainCam.flashEffect.start(2000);
+
+            if (!vars.atmos.timer) {
+                console.log(`Initialising Storm Timer`);
+                vars.atmos.timer = setInterval( ()=> {
+                    let aV = vars.atmos;
+                    if (aV.stormDistance[0]>aV.stormDistance[1]) {
+                        aV.stormDistance[0]-=20; // sped this up from 10 per second, now twice as fast
+                    } else {
+                        clearInterval(aV.timer);
+                        aV.timer=false;
+                        aV.stormDistance=-1;
+                        return false;
+                    }
+                }, 1000)
+            }
+
+
+
+
+            // if we get here the timer has already been started,
+            // so this is not the initial flash at the start of the storm
+            // but a follow up flash
+
+            // has the timer died yet?
+            if (!vars.atmos.timer || vars.atmos.stormDistance===-1) {
+                // we have ran out of storm time
+                return false;
+            }
+            
+            // figure out how far away the storm is
+            let distance = vars.atmos.stormDistance[0];
+            let stormDistanceMs = distance/0.343; // gives time to storm in ms... wait did I just use t=d/s (ie s=d/t)... physics works!
+            stormDistanceMs < 0 ? stormDistanceMs*=-1 : null; // invert if negative (means its moving away)
+            console.log(`Storm distance is ${distance} = ${stormDistanceMs}ms`);
+
+            let type = stormDistanceMs<=5000 ? 'High' : 'Low';
+            setTimeout( ()=> {
+                console.log(`Playing Thunder sound`);
+                // play thunder sound
+                vars.audio.playThunder(type);
+                // queue up another lightning strike
+                let offsetPerSecond = 20;
+                let convToS = 1000/offsetPerSecond;
+                let distanceLeft = vars.atmos.stormDistance[0] - vars.atmos.stormDistance[1];
+                if (distanceLeft > (10 + offsetPerSecond) *offsetPerSecond) { // do we have at least 30s left of the storm?
+                    let rndInt = Phaser.Math.RND;
+                    let delayMax = distanceLeft - (20*offsetPerSecond);
+                    let actualDelay = vars.clamp(rndInt.between(50, delayMax)*convToS, 5000, 40000); // ms
+                    actualDelay = actualDelay=40000 ? actualDelay-rndInt.between(800,1900) : actualDelay;
+
+                    console.log(`Setting timeout for next lightning strike ${actualDelay}\n  - storm distance left: ${distanceLeft}`);
+                    setTimeout( ()=> {
+                        vars.atmos.lightningStrike();
+                    }, actualDelay)
+                } else {
+                    // the distance left is less than 20s, call the stormClear function after the delay of time left
+                    // eg if we have a value of 230 (23s), we will delay by 23000ms
+                    let delay = distanceLeft*50;
+                    // at which time we stop the rain and brighten the sky
+                    setTimeout( ()=> {
+                        console.log(`STOPPING THE RAIN AND FADING OUT THE DARKNESS`);
+                        // fade out the rain audio
+                        scene.sound.get('rainLoop').pause();
+                        // fade out the rain emitter (You cant actually do this so we have to stop it emitting and fade out each particle TODO)
+                        vars.particles.rainStart(false);
+                        // fade out the darkness
+                        let qg = vars.phaserObject.quickGet;
+                        let darkness = qg('darker');
+                        scene.tweens.add({ targets: darkness, alpha: 0, duration: 15000 })
+
+                        // enable the clouds again
+                        vars.atmos.updateCloud();
+                    }, delay);
+                    // we also need to start the clouds again
+                }
+            }, stormDistanceMs);
+        },
+
+        stormStart: ()=> {
+            // reset the storm clouds var
+            let aV = vars.atmos;
+            aV.bigCloudsSeen=0;
+            let darker = vars.phaserObject.quickGet('darker');
+            let rndInt = Phaser.Math.RND;
+            let duration = rndInt.between(10,20)*1000;
+            // darken the game screen over 10 to 20 seconds
+            scene.tweens.add({
+                targets: darker,
+                duration: duration,
+                alpha: 0.55,
+                onComplete: vars.atmos.lightningStrike
+            })
+            // we also need to set a 'distance' for the heavy rain (something like 1 minute to 2 minutes away - the reason for the distance is so we can start a lightning/thunder loop with roughly correct spacing etc)
+            let dist = rndInt.between(190,226)*10; // distance Is in metres. However, to change the speed of the storm (during testing) I am limiting the speed of the storm to a reduction of 10m/s (where it should really be 300m/s) as the storm would be over soon after it was started
+            aV.stormDistance = [dist, -dist];
+
+            // after a certain delay (between 2/3 and 4/5 the time for the darkness anim to run)...
+            let delayInt = rndInt.between(2,4);
+            let delay = -1;
+            switch (delayInt) {
+                case 2: delay = duration * (2/3); break;
+                case 3: delay = duration * (3/4); break;
+                case 4: delay = duration * (4/5); break;
+                default: console.error(`delayInt wasnt valid? (${delayInt})`); break;
+            }
+            if (delay===-1) { return false; }
+            // if the delay is valid
+            setTimeout(()=>{ // ...start the rain
+                vars.particles.rainStart();
+                vars.audio.playSound('rainLoop', true);
+            }, delay);
+        },
+
+        updateCloud: ()=> {
+            let aV = vars.atmos;
+            if (aV.bigCloudsSeen > 6) {
+                aV.stormStart();
+                return false;
+            }
+            // we need a new cloud texture
+            let cloud = vars.phaserObject.quickGet('rndCloud');
+            let cloudSet = Phaser.Math.RND.between(1,2)===1 ? 'big' : 'small';
+            cloudSet==='big' ? aV.bigCloudsSeen++ : null;
+            let frame = aV.getRandomCloud(cloudSet);
+            cloud.setFrame(frame);
+            // and set it moving
+            aV.generateCloud(cloud);
+        }
+    },
+
     audio: {
+        atmos: { thunderLow: [], thunderHigh: [] },
         dice: [],
         countersMove: [],
         streams: [],
@@ -594,7 +802,8 @@ var vars = {
         },
 
         loadStream: ()=> {
-            let streamName = shuffle(vars.audio.streams)[0];
+            let aV = vars.audio;
+            let streamName = shuffle(aV.streams)[0];
             /*scene.load.audio('ambience', `audio/streams/ambience/${stream}.ogg`, { stream: true})
             scene.load.start();*/
             // PHASERS DOCUMENTATION FOR STREAMING OBJECTS IS FUKN TERRIBLE
@@ -602,27 +811,29 @@ var vars = {
 
             // AND HERES HOW EASY IT IS IN HOWLER XD
             let src = `assets/audio/streams/ambience/${streamName}.ogg`;
-            let volume = vars.audio.volume.howler; // the volume of these streams are really low, so I have to set the volume to 1
-            vars.audio.howlerStream = new Howl({src, html5: true, preload: true, volume: volume, autoplay: true});
+            let volume = aV.volume.howler; // the volume of these streams are really low, so I have to set the volume to 1
+            aV.howlerStream = new Howl({src, html5: true, preload: true, volume: volume, autoplay: true});
             vars.DEBUG ? console.log(`🎵 Playing stream with name ${streamName}`) : null;
-            vars.audio.streamPlaying = true;
+            aV.streamPlaying = true;
         },
 
         mute: ()=> {
+            let aV = vars.audio;
             if (scene.sound.mute) {
                 scene.sound.setMute(false);
-                vars.audio.howlerStream.mute(false);
+                aV.howlerStream.mute(false);
                 scene.containers.volumeOptions.getByName('gfx_volBar').clearTint();
             } else {
                 scene.sound.setMute(true);
-                vars.audio.howlerStream.mute(true);
+                aV.howlerStream.mute(true);
                 scene.containers.volumeOptions.getByName('gfx_volBar').setTint(0x888888);
             }
         },
 
-        playSound: function(_key) {
+        playSound: function(_key, _loop=false) {
             vars.DEBUG ? console.log(`🎵 Playing audio with name ${_key}`) : null;
-            scene.sound.play(_key);
+            let config = { loop: _loop }
+            scene.sound.play(_key, config);
         },
 
         playStream: (_key)=> {
@@ -647,13 +858,23 @@ var vars = {
             }, 10000);
         },
 
+        playThunder: (_type='Low')=> {
+            let aV = vars.audio;
+            let tV = aV.atmos[`thunder${_type}`];
+            let selectedKey = tV.splice(0,1)[0]; // grab the 0th index
+            tV.push(selectedKey); // and push it back on to the end
+            // play it
+            aV.playSound(selectedKey);
+        },
+
         playerWinLose: (_winner)=> {
             vars.audio.sentenceBuild('pwin');
         },
 
         rollDice: ()=> {
             vars.DEBUG ? console.log(`🎵 🎲 Selecting random dice roll audio`) : null;
-            vars.audio.playSound(shuffle(vars.audio.dice)[0]);
+            let aV = vars.audio;
+            aV.playSound(shuffle(aV.dice)[0]);
         },
 
         say: ()=> {
@@ -713,14 +934,14 @@ var vars = {
                 console.log(sentence);
                 console.log('Saying it...');
             }
-            sLength===0 ? vars.audio.say() : null;
+            sLength===0 ? aV.say() : null;
         },
 
         volumeSet: ()=> { // incoming volume will be 0 -> 1
             let aV = vars.audio;
             let vV = aV.volume;
-            if (vars.audio.howlerStream!==null) {
-                vars.audio.howlerStream.volume(vV.howler);
+            if (aV.howlerStream!==null) {
+                aV.howlerStream.volume(vV.howler);
             }
             scene.sound.setVolume(vV.phaser);
             vars.DEBUG ? console.log(`🔊 Setting non ambience volume to ${vV.phaser}. Ambience volume is now ${vV.howler}`) : null;
@@ -728,7 +949,8 @@ var vars = {
 
         volumeChange: (_increase)=> {
             if (_increase !== false && _increase !== true) { return false; }
-            let vV = vars.audio.volume;
+            let aV = vars.audio;
+            let vV = aV.volume;
             let mult = vV.multiplier;
             let inc = _increase ? 0.1 : -0.1;
             vV.phaser = vars.clamp(~~((vV.phaser + inc)*100)/100,0.1,1);
@@ -740,7 +962,7 @@ var vars = {
             let maxWidth = 600;
             let thisWidth = maxWidth*vV.phaser;
 
-            vars.audio.volumeSet();
+            aV.volumeSet();
 
             scene.tweens.add({ targets: volBar, scaleX: thisWidth, duration: 200 })
             // MAKE SURE THIS LINE WORKS!
@@ -1270,11 +1492,12 @@ var vars = {
             
         },
 
-        highlightObject: (_oName)=> {
+        highlightObject: (_oName, _glow=0x000080, _thick=6)=> {
+            if (_oName==='optPlay') { _glow = 0x4DD2FF; _thick=3; }
             // grab it
             let gameObject = vars.phaserObject.quickGet(_oName);
             // highlight it
-            scene.plugins.get('rexoutlinepipelineplugin').add(gameObject).setOutlineColor(0x000080).setThickness(6)
+            scene.plugins.get('rexoutlinepipelineplugin').add(gameObject).setOutlineColor(_glow).setThickness(_thick);
             // remember it
             vars.graphics.highlighted = _oName;
         },
@@ -1354,7 +1577,7 @@ var vars = {
                     }
                 }
 
-                if (oName === 'loadedButton') {
+                if (oName === 'loadedButton' || oName === 'optPlay') {
                     vars.graphics.highlightObject(oName);
                 }
 
@@ -1381,7 +1604,7 @@ var vars = {
                     }
                 }
 
-                if (oName === 'loadedButton') {
+                if (oName === 'loadedButton' || oName === 'optPlay') {
                     vars.graphics.highlightedObjectReset(oName);
                 }
 
@@ -1564,6 +1787,9 @@ var vars = {
             // sand explosion for the loaded image
             vars.particles.sandExplosionInit();
 
+            // rain
+            vars.particles.rainInit();
+
             /* scene.input.on('pointerdown', function (pointer) {
                 vars.particles.available.sand.emitParticleAt(pointer.x, pointer.y);
             }); */
@@ -1593,6 +1819,31 @@ var vars = {
             let clamped = vars.clamp(a,1,max);
             let particleCount = vars.clamp(~~(clamped/max*1024),192,1024); // I could just return this but its less clear, so it stays
             return particleCount;
+        },
+
+        rainInit: ()=> {
+            vars.particles.available.rain = scene.add.particles('sandParticleImage').setDepth(consts.depths.weather+1).setVisible(false);
+
+            vars.particles.available.rain.createEmitter({
+                x: { min: 0, max: vars.canvas.width },
+                y: -100, tint: 0x528087,
+                lifespan: 3000,
+                gravityX: 10,
+                gravityY: 300,
+                scale: 0.25, scaleY: 4,
+                quantity: 4, blendMode: 'ADD', on: false
+            });
+        },
+
+        rainStart(_start=true) {
+            let pV = vars.particles.available.rain;
+            if (_start) {
+                !pV.emitters.list[0].on ? pV.emitters.list[0].start() : pV.emitters.list[0].resume();
+                pV.setVisible(true);
+            } else {
+                pV.emitters.list[0].pause();
+                pV.setVisible(false);
+            }
         },
 
         sandExplosionInit: (_src=vars.phaserObject.logoSource)=> {

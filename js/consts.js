@@ -52,10 +52,11 @@ const consts = {
         diceBG: 12,
         dice: 15,
         shield: 20,
-        optionsScreen: 30,
+        optionsScreen: 40,
         loading: 50,
         message: 80,
-        volumeOptions: 70
+        volumeOptions: 70,
+        weather: 30
     },
 
     durations: {

@@ -28,6 +28,7 @@ vars.init = (stage=1)=> { // ENTRY POINT IS HERE
     
     if (stage===4) {
         v.UI.initGameScreen();
+        v.atmos.init();
         v.DEBUG ? v.debugFN.attackLaneInit() : null;
     }
 }
@@ -105,7 +106,7 @@ vars.files = {
             scene.load.audio('menuClick', `audio/menuClick${o}`);
 
             // load the dice audio
-            let aD = 'audio/dice/';
+            let aD = 'audio/dice/'; // short for audio dir
             scene.load.audio('sandHit', `${aD}sandHit${o}`);
             scene.load.audio('diceRoll1', `${aD}dice1${o}`);
             scene.load.audio('diceRoll2', `${aD}dice2${o}`);
@@ -125,6 +126,21 @@ vars.files = {
             ['player', 'rollAgain', 'rollDice', 'youLose', 'youWin', 'youRolledA', 'noValid', 'gameOver', '0', '1', '2', '3', '4'].forEach( (_v)=> {
                 scene.load.audio(_v, `${aD}${_v}${o}`);
             });
+
+            // atmospherics
+            aD = 'audio/atmos/';
+            ['rainLoop','thunderHigh1','thunderHigh2','thunderHigh3','thunderLow1','thunderLow2','thunderLow3'].forEach( (_key)=> {
+                // if its a thunder sound it gets added to the atmos object
+                if (_key.includes('High')) {
+                    aV.atmos.thunderHigh.push(_key);
+                } else if (_key.includes('Low')) {
+                    aV.atmos.thunderLow.push(_key);
+                }
+                scene.load.audio(_key, `${aD}${_key}${o}`);
+            })
+            // shuffle the thunder files
+            shuffle(aV.atmos.thunderHigh);
+            shuffle(aV.atmos.thunderLow);
         }
     },
 
@@ -144,6 +160,7 @@ vars.files = {
             scene.load.image('shielded',       'images/shielded.png');
             scene.load.image('whitePixel',     'images/whitePixel.png');
 
+            scene.load.atlas('clouds',         'images/atmos/clouds.png',  'images/atmos/clouds.json');
             scene.load.atlas('counters',       'images/counters.png',      'images/counters.json');
             scene.load.atlas('dice',           'images/dice.png',          'images/dice.json');
             scene.load.atlas('options',        'images/optionImages.png',  'images/optionImages.json');

@@ -13,6 +13,8 @@ function dirToArray($dir) {
         'busymarketplaceFIFO8.ogg',
         'busymarketplaceFIFO9.ogg',
         'favicon.png',
+        'mask.png',
+        'ss.png',
         'smallImage.json',
         'blur.glsl.js'
     ];
@@ -20,11 +22,11 @@ function dirToArray($dir) {
     $cdir = scandir($dir);
     foreach ($cdir as $key => $value) {
         if (substr_count($value,'__orig')===0) {
-            if (!in_array($value,array(".","..","__OLD"))) {
+            if (!in_array($value,array(".","..","__OLD","__indivs"))) {
                 if (is_dir($dir . DIRECTORY_SEPARATOR . $value)) {
                     $result[$value] = dirToArray($dir . DIRECTORY_SEPARATOR . $value);
                 } else {
-                    if ((substr_count($value, '.png')>0 && substr_count($value, '.fw.')===0) || substr_count($value,'.jpg')>0 || substr_count($value,'.ogg')>0 || substr_count($value,'.xml')>0 || (substr_count($value,'.json')>0 && substr_count($value,'fileList.json')===0)) {
+                    if ((substr_count($value, '.png')>0 && substr_count($value, '.fw.')===0 && substr_count($value, '.bak')===0) || substr_count($value,'.jpg')>0 || substr_count($value,'.ogg')>0 || substr_count($value,'.xml')>0 || (substr_count($value,'.json')>0 && substr_count($value,'fileList.json')===0)) {
                         if (!in_array($value, $ignoreList)) {
                             $result[] = $value; 
                             $fSize = filesize($dir . DIRECTORY_SEPARATOR . $value);
