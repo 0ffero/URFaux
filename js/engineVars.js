@@ -153,6 +153,7 @@ vars.files = {
     images: {
         init: ()=> {
             scene.load.image('sandBG',         'images/sand.jpg');
+            scene.load.image('sandMask',       'images/sandMask.png');
             scene.load.image('boardBG',        'images/board.png');
             scene.load.image('playButtonBG',   'images/playButtonBG.jpg');
             scene.load.image('loadedBG',       'images/loadedScreen.jpg');
@@ -168,6 +169,8 @@ vars.files = {
             scene.load.atlas('fullScreenBtn',  'images/screenMaxMin.png',  'images/screenMaxMin.json');
 
             // particles
+            //scene.load.image('diamondInTheRough', 'particles/whiteFlare.png');
+            scene.load.image('diamondInTheRough', 'particles/whiteFlare.png');
             scene.load.image('sandParticleImage', 'particles/whiteSmall.png');
 
             if (vars.DEBUG) {
@@ -289,5 +292,18 @@ vars.phaserObject.logoSource = {
 
         } while (pixel.alpha < 255);
         return vec.setTo(x + origin.x, y + origin.y);
+    }
+}
+
+vars.phaserObject.wetSand = {
+    getRandomPoint: function (vec) {
+        let x; let y; let pixel;
+        do {
+            x = Phaser.Math.Between(0, vars.canvas.width - 1);
+            y = Phaser.Math.Between(0, vars.canvas.height - 1);
+            pixel = scene.textures.getPixel(x, y, 'sandMask');
+        } while (pixel.alpha < 255);
+
+        return vec.setTo(x,y);
     }
 }

@@ -1,7 +1,7 @@
 var vars = {
     DEBUG: false,
 
-    version: '0.99.ɑ2',
+    version: '0.99.ɑ2.1',
 
     clamp: Phaser.Math.Clamp,
 
@@ -708,6 +708,9 @@ var vars = {
                         let qg = vars.phaserObject.quickGet;
                         let darkness = qg('darker');
                         scene.tweens.add({ targets: darkness, alpha: 0, duration: 15000 })
+                        // fade in wet sand at the same time
+                        let wetSand = qg('wetSand');
+                        scene.tweens.add({ targets: wetSand, alpha: 0.45, duration: 15000, yoyo: true, hold: 30000 })
 
                         // enable the clouds again
                         vars.atmos.updateCloud();
@@ -1781,18 +1784,35 @@ var vars = {
             // particles are stored here
             vars.DEBUG ? console.log('  .. 🎆 initialising particles and vars') : null;
 
+            let pV = vars.particles;
             // sand hit
-            vars.particles.diceGroundHitInit();
-
+            pV.diceGroundHitInit();
             // sand explosion for the loaded image
-            vars.particles.sandExplosionInit();
-
+            pV.sandExplosionInit();
             // rain
-            vars.particles.rainInit();
+            pV.rainInit();
+            // diamonds (in the rough)
+            pV.diamondsInTheRough();
 
+            // this can be enabled to test particle emitters
             /* scene.input.on('pointerdown', function (pointer) {
                 vars.particles.available.sand.emitParticleAt(pointer.x, pointer.y);
             }); */
+        },
+
+        diamondsInTheRough: ()=> {
+            let depth = consts.depths.diceBG+1;
+            vars.particles.available.diamonds = scene.add.particles('diamondInTheRough').setDepth(depth);
+
+            vars.particles.available.diamonds.createEmitter({
+                x: 0, y: 0, // these are passed in
+                lifespan: 1000,
+                gravityY: 1,
+                scale: { start: 0, end: 0.13, ease: 'Quad.easeOut' },
+                alpha: { start: 1, end: 0, ease: 'Quad.easeIn' },
+                blendMode: 'ADD',
+                emitZone: { type: 'random', source: vars.phaserObject.wetSand }
+            });
         },
 
         diceGroundHitInit: ()=> {
@@ -2060,6 +2080,7 @@ var vars = {
 
             // draw the background (game board)
             scene.add.image(vars.canvas.cX, vars.canvas.cY, 'sandBG').setInteractive().setName('sandBG').setDepth(dC.sand);
+            scene.add.image(vars.canvas.cX, vars.canvas.cY, 'sandMask').setName('wetSand').setDepth(dC.sand+1).setAlpha(0);
             scene.add.image(vars.canvas.cX, vars.canvas.cY, 'boardBG').setInteractive().setName('gameBoard').setDepth(boardDepth);
 
             // add game PLAYER FACES
@@ -2069,9 +2090,9 @@ var vars = {
             scene.tweens.add({ targets: pFace, y: pFace.y-25, yoyo: true, repeat: -1, duration: 500, ease: 'Quad' })
 
             // draw the background for the dice area
-            scene.add.image(1350, 550, 'whitePixel').setName('diceBlackBG').setTint(0x0).setAlpha(0.35).setDepth(diceDepth-2).setScale(450,450).setOrigin(0);
-            scene.add.text(1500, 585, 'Player 1').setName('playerText').setFontSize(32).setFontStyle('bold').setFontFamily('Consolas').setAlign('center').setAlpha(0).setDepth(dC.dice).setShadow(4,4,'#000',1);
-            scene.add.text(1400, 935, 'Please roll the dice').setName('rollText').setFontSize(32).setFontStyle('bold').setFontFamily('Consolas').setAlign('center').setAlpha(0).setDepth(dC.dice).setShadow(4,4,'#000',1).setData('old','');
+            scene.add.image(1450, 550, 'whitePixel').setName('diceBlackBG').setTint(0x0).setAlpha(0.35).setDepth(diceDepth-2).setScale(450,450).setOrigin(0);
+            scene.add.text(1600, 585, 'Player 1').setName('playerText').setFontSize(32).setFontStyle('bold').setFontFamily('Consolas').setAlign('center').setAlpha(0).setDepth(dC.dice).setShadow(4,4,'#000',1);
+            scene.add.text(1500, 935, 'Please roll the dice').setName('rollText').setFontSize(32).setFontStyle('bold').setFontFamily('Consolas').setAlign('center').setAlpha(0).setDepth(dC.dice).setShadow(4,4,'#000',1).setData('old','');
 
             // DICE
             // draw the dice and animate them into position
