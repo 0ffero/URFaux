@@ -1,0 +1,120 @@
+{
+	"frames": [
+		{
+			"filename": "lightningBottomRight",
+			"frame": {
+				"x": 1,
+				"y": 1,
+				"w": 498,
+				"h": 575
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 498,
+				"h": 575
+			},
+			"sourceSize": {
+				"w": 498,
+				"h": 575
+			}
+		},
+		{
+			"filename": "lightningLeftStrike2",
+			"frame": {
+				"x": 501,
+				"y": 1,
+				"w": 160,
+				"h": 493
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 160,
+				"h": 493
+			},
+			"sourceSize": {
+				"w": 160,
+				"h": 493
+			}
+		},
+		{
+			"filename": "lightningLeftStrike1",
+			"frame": {
+				"x": 663,
+				"y": 1,
+				"w": 879,
+				"h": 624
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 879,
+				"h": 624
+			},
+			"sourceSize": {
+				"w": 879,
+				"h": 624
+			}
+		},
+		{
+			"filename": "lightningMain",
+			"frame": {
+				"x": 1544,
+				"y": 1,
+				"w": 1093,
+				"h": 1009
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 1093,
+				"h": 1009
+			},
+			"sourceSize": {
+				"w": 1093,
+				"h": 1009
+			}
+		},
+		{
+			"filename": "lightningTopRight",
+			"frame": {
+				"x": 1,
+				"y": 1012,
+				"w": 500,
+				"h": 738
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 500,
+				"h": 738
+			},
+			"sourceSize": {
+				"w": 500,
+				"h": 738
+			}
+		}
+	],
+	"meta": {
+		"app": "http://www.codeandweb.com/texturepacker",
+		"version": "1.0",
+		"image": "lightning.png",
+		"format": "RGBA8888",
+		"size": {
+			"w": 2638,
+			"h": 1751
+		},
+		"scale": "1"
+	}
+}

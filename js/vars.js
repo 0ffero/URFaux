@@ -1,7 +1,7 @@
 var vars = {
     DEBUG: false,
 
-    version: '0.99.ɑ2.1',
+    version: '0.99.b1.2',
 
     clamp: Phaser.Math.Clamp,
 
@@ -266,17 +266,27 @@ var vars = {
             })
         },
 
-        faceToCentre: ()=> {
+        faceFade: (out=true)=> {
+            let pF = vars.phaserObject.quickGet('playerFace');
+            let alpha = out ? 0: 1;
+            scene.tweens.add({ targets: pF, alpha: alpha, duration: 500 })
+        },
+
+        faceToCentre: ()=> { // the next 2 functions arent needed any more, as the UI has an update that shows the players face.
+            /*
             vars.DEBUG ? console.log('Sending player face to centre x.') : null;
             let pf = vars.phaserObject.quickGet('playerFace');
             let o = pf.width/2;
             scene.tweens.add({ targets: pf, x: vars.canvas.cX-o, duration: 2000, ease: 'Quad' })
+            */
         },
 
         faceToStartPosition: ()=> {
+            /*
             let pfPos = consts.positions.playerFace;
             let pf = vars.phaserObject.quickGet('playerFace');
             scene.tweens.add({ targets: pf, x: pfPos[0], duration: 2000, ease: 'Quad' })
+            */
         },
 
         fadeTheThing: (_object=null, _duration=1000)=> {
@@ -334,6 +344,38 @@ var vars = {
             vars.DEBUG ? console.log(`Barrier for square a4 has been initialised`) : null;
         },
 
+        lightningStrike: ()=> {
+            let delay = 100;
+            let qg = vars.phaserObject.quickGet;
+            let rndInt = Phaser.Math.RND;
+            let minX = 200; let maxX = 1500;
+            let xPos = rndInt.between(minX, maxX);
+            let cX = scene.children.getByName('lB_Main').x;
+            let offsetX = cX - xPos;
+            offsetX=0;
+            ['lB_Main','lB_TR','lB_LS1','lB_LS2','lB_BR'].forEach( (_pos, _i)=> {
+                setTimeout( ()=> {
+                    let lB = qg(_pos); // grab piece
+                    let target = lB.setAlpha(1).setPosition(lB.x-offsetX,lB.y); // show it and set its new position
+                    scene.tweens.add({ targets: target, alpha: 0, duration: 3000, ease: 'Quad.easeOut' }); // fade it out
+                }, delay*_i);
+            })
+            setTimeout( ()=> {
+                vars.animate.lightningStrikeHit(-offsetX);
+            }, 500);
+        },
+
+        lightningStrikeHit: (_offsetX)=> {
+            let rndInt = Phaser.Math.RND;
+            let defaults = [1000,0];
+            consts.defaultLightningHits.forEach( (_xy)=> { // we need to translate the xy pos based on the offset coming into this function
+                let nTX = defaults[0]+_xy[0]; let nTY = defaults[1]+_xy[1]; // these are the default positions for the hits
+                // translate them by the incoming offset
+                let tX = nTX + _offsetX;
+                rndInt.between(0,1)===1 ? vars.particles.jewelExplosionDo(tX, nTY+30): null;
+            })
+        },
+
         loadingBarProgressUpdate: (_fileData)=> {
             if (vars.files.loaded>=1) {
                 vars.DEBUG ? console.warn(`All files have already loaded.\nAnd this isnt a stream... this may be a problem for the progress bar`) : null;
@@ -388,8 +430,10 @@ var vars = {
                 }
             } else {
                 if (vars.DEBUG !== true) { return false; } // DEBUG var is undefined for non devs
-                console.warn(`${fSName}, but it was NOT found in the file list...`);
-                console.warn(_fileData);
+                if (!fSName.includes('rexoutlinepipelineplugin.min.js')) {
+                    console.warn(`${fSName} was loaded, but it was NOT found in the file list...`);
+                    console.warn(_fileData);
+                }
             }
         },
 
@@ -422,6 +466,32 @@ var vars = {
             }))
         },
 
+        playAgainButtonBG: ()=> {
+            let bg = vars.phaserObject.quickGet('playButtonBG').setPosition(595,790).setDepth(consts.depths.message+1);
+            bg.setData('x', 595);
+            let w = 730; let h = 165;
+            if (bg.alpha!==1) {
+                bg.setCrop(0,0,w,h).setPosition(595,790);
+                scene.tweens.add({ targets: bg, alpha: 1, duration: 7000 })
+            }
+            let maxX = bg.width-w;
+            scene.tweens.addCounter({ from: 0, to: maxX, delay: 250, duration: 60000,
+                onUpdate: (_t, _v)=> {
+                    if (bg.alpha>0) {
+                        let x = ~~(bg.getData('x'));
+                        bg.setCrop(_v.value,0,w,h).setPosition(x-_v.value,bg.y);
+                        if (x>=maxX) { x=0; }
+                        if (bg.alpha===1 && _t.progress>=0.95) {
+                            bg.setCrop(0,0,w,h).setPosition(595,790);
+                            _t.restart();
+                        }
+                    } else {
+                        _t.remove();
+                    }
+                }
+            });
+        },
+
         playButtonBG: ()=> {
             let bg = vars.phaserObject.quickGet('playButtonBG');
             let maxX = bg.width-290;
@@ -435,6 +505,9 @@ var vars = {
                             bg.setCrop(0,0,290,140).setPosition(815,810);
                             _t.restart();
                         }
+                    } else {
+                        // we need to edstroy this tween as it will interfere when we use the bg again (currently happening when showing playAgain button)
+                        _t.remove();
                     }
                 }
             });
@@ -490,7 +563,9 @@ var vars = {
             // now animate the popup
             let yoyo = true; let hold = _dur;
             if (_dur===-1) { // this pop up doesnt disappear until its clicked
-                yoyo = false; hold = null; bg.setInteractive();
+                yoyo = false; hold = null; 
+                //we used to make the bg interactive but we now have a button the player can click on
+                //bg.setInteractive();
             }
             let duration = consts.durations.popup;
             // MESSAGE TEXT
@@ -524,6 +599,21 @@ var vars = {
                 }
 
                 scene.tweens.add({ targets: _o, alpha: alpha, duration: duration, delay: delay })
+            })
+        },
+
+        showPlayAgain: (fadeIn=true)=> {
+            let qg = vars.phaserObject.quickGet;
+            let dur = fadeIn ? 7000 : 500;
+            let alpha = fadeIn ? 1 : 0;
+
+            scene.tweens.add({
+                targets: [qg('playAgain'), qg('playAgainBG')],
+                alpha: alpha,
+                duration: dur,
+                onComplete: (_t, _o)=> {
+                    _o[0].alpha === 1 ? _o[0].setInteractive() : _o[0].disableInteractive();
+                }
             })
         },
 
@@ -587,6 +677,20 @@ var vars = {
 
             // start the animation
             vars.atmos.updateCloud();
+
+            vars.atmos.initLightningStrike();
+        },
+
+        initLightningStrike: ()=> {
+            let x = 1000; let y=0;
+            let depth = consts.depths.weather;
+            let a = scene.add.image(x,y,'lightning','lightningMain').setDepth(depth).setOrigin(0.5,0).setName('lB_Main').setAlpha(0);
+            let b = scene.add.image(x+614,y+268,'lightning','lightningTopRight').setDepth(depth).setOrigin(0.5,0).setName('lB_TR').setAlpha(0);
+            let c = scene.add.image(x-62,y+132,'lightning','lightningLeftStrike1').setDepth(depth).setOrigin(0.5,0).setName('lB_LS1').setAlpha(0);
+            let d = scene.add.image(x-154,y+567,'lightning','lightningLeftStrike2').setDepth(depth).setOrigin(0.5,0).setName('lB_LS2').setAlpha(0);
+            let e = scene.add.image(x+236,y+478,'lightning','lightningBottomRight').setDepth(depth).setOrigin(0.5,0).setName('lB_BR').setAlpha(0);
+
+            scene.groups.lightning.addMultiple([a,b,c,d,e]);
         },
 
         initRain: ()=> { // this is a particle effect, incase youre wondering where the code is...
@@ -638,7 +742,8 @@ var vars = {
         lightningStrike: ()=> {
             // start the timer if it hasnt been
             console.log(`Lightning Strike`);
-            vars.camera.mainCam.flashEffect.start(2000);
+            vars.camera.mainCam.flashEffect.start(3000);
+            //vars.animate.lightningStrike();
 
             if (!vars.atmos.timer) {
                 console.log(`Initialising Storm Timer`);
@@ -1306,9 +1411,14 @@ var vars = {
                 pV.win = true;
                 let winner = pV.current;
                 pV.wins[winner]++;
+                // update the slate
+                vars.phaserObject.quickGet(`p${winner}score`).setText(pV.wins[winner]);
+
                 vars.UI.showMessage(`Player ${winner} Wins!`, -1, true);
-                vars.animate.faceToCentre();
+                vars.animate.faceFade(true);
                 vars.audio.playerWinLose(winner);
+                vars.animate.showPlayAgain();
+                vars.animate.playAgainButtonBG();
                 return false;
             }
 
@@ -1325,7 +1435,7 @@ var vars = {
             }
         },
 
-        resetBoard: ()=> {
+        resetBoard: (qg)=> {
             vars.DEBUG ? console.groupCollapsed('Resetting all board positions'): null;
             for (bP in vars.boardPositions) {
                 vars.DEBUG ? console.log(bP) : null;
@@ -1341,6 +1451,8 @@ var vars = {
                 vars.DEBUG ? console.log('-----------------------------------------------------------------') : null;
             }
             vars.DEBUG ? console.groupEnd() : null;
+            // hide the force field on a4
+            vars.animate.showBarrier(false);
         },
 
         resetCounters: ()=> {
@@ -1353,6 +1465,7 @@ var vars = {
                 scene.groups[_cC].children.each( (_c)=> {
                     let xy = _c.name.includes('w') ? [ bPs.wS.x, bPs.wS.y] : [ bPs.bS.x, bPs.bS.y];
                     _c.setData({ moveFrom : '', moveTo: '', boardPosition: '', x: xy[0], y: xy[1] });
+                    _c.setPosition(xy[0],xy[1]).setAlpha(0).setFrame(`${_cC[0]}S`);
                     vars.DEBUG ? console.log(_c.data.list) : null;
                 })
             })
@@ -1366,27 +1479,42 @@ var vars = {
 
         restart: ()=> {
             vars.DEBUG ? console.log(`Restart requested...`) : null;
-            let aV = vars.animate;
-            // send the player face back to start position
-            aV.faceToStartPosition();
+            let qg = vars.phaserObject.quickGet;
+            // send the player face back to start position - no longer needed
+            // aV.faceToStartPosition();
 
             // reset all dice + vars
             // ive decided to disable the dice when resetting them as ill
             // be implementing a screen between the pop up and the new game
-            vars.phaserObject.quickGet('pointsCount').setText('4');
+            qg('pointsCount').setText('4');
             vars.game.diceEnable(false, true);
 
             // reset all counters + vars
             vars.game.resetCounters();
+            // reset the board var
+            vars.game.resetBoard(qg);
 
             // reset player vars
             vars.player.reset();
 
-            // reset the board var
-            vars.game.resetBoard();
-
             // hide the pop up
-            vars.UI.showStartScreen();
+            vars.UI.hidePopUp(qg);
+
+            // fade out the dice counter
+            scene.tweens.add({
+                targets: qg('pointsCount'),
+                alpha: 0,
+                duration: 500
+            })
+
+            let aV = vars.animate;
+            // show the player face again
+            aV.faceFade(false);
+
+            // hide the playAgain button
+            vars.animate.showPlayAgain(false);
+            // hide the scrolling background
+            scene.tweens.add({ targets: qg('playButtonBG'), alpha: 0, duration: 500 })
         },
 
         rollDice: ()=> {
@@ -1530,6 +1658,10 @@ var vars = {
 
         init: function() {
             vars.DEBUG ? console.log('  .. 🎮 initialising input and vars') : null;
+            scene.input.on('pointermove', function (pointer) {
+                vars.phaserObject.quickGet('pointer').setPosition(pointer.x, pointer.y);
+                vars.particles.available.pointer.setPosition(pointer.x, pointer.y);
+            });
             vars.DEBUG ? vars.input.enableCombos() : null;
             scene.input.on('gameobjectdown', function (pointer, gameObject) {
                 let iV = vars.input;
@@ -1661,13 +1793,14 @@ var vars = {
             } else if (oName.includes('counter')) {
                 vars.animate.counterToNewPosition(gameObject);
             } else if (oName === 'popupBG') {
+                // we no longer allow the player to click the background as theres a specific 'play again' button now
                 // this is the pop up background
-                if (vars.player.win) {
+                /* if (vars.player.win) {
                     // restart the game
                     vars.game.restart();
                 } else {
-                    console.warn(`Pop up background was clicked. But the win variable is currently false.\nThis will fire when implementing new reasons to keep the background visible.`);
-                }
+                } */
+                console.warn(`Pop up background was clicked. This no longer does anything`);
             } else if (oName.includes('Arrow')) {
                 vars.audio.playSound('menuClick');
                 vars.UI.changePlayerFace(gameObject);
@@ -1693,6 +1826,8 @@ var vars = {
                 vars.audio.mute();
             } else if (oName==='minMaxButton') {
                 if (scene.scale.isFullscreen) { gameObject.setFrame('maxButton'); scene.scale.stopFullscreen(); } else { gameObject.setFrame('minButton'); scene.scale.startFullscreen(); }
+            } else if (oName==='playAgain' || oName==='playAgainBG') {
+                vars.game.restart();
             } else {
                 vars.DEBUG ? console.log(`🎮 Game object with name "${gameObject.name}" was clicked. No handler found.`) : null;
             }
@@ -1793,6 +1928,10 @@ var vars = {
             pV.rainInit();
             // diamonds (in the rough)
             pV.diamondsInTheRough();
+            // jewel explosion on lightning strike
+            pV.jewelExplosionInit();
+
+            pV.pointerParticles();
 
             // this can be enabled to test particle emitters
             /* scene.input.on('pointerdown', function (pointer) {
@@ -1801,13 +1940,12 @@ var vars = {
         },
 
         diamondsInTheRough: ()=> {
-            let depth = consts.depths.diceBG+1;
+            let depth = consts.depths.sand+1;
             vars.particles.available.diamonds = scene.add.particles('diamondInTheRough').setDepth(depth);
 
             vars.particles.available.diamonds.createEmitter({
-                x: 0, y: 0, // these are passed in
-                lifespan: 1000,
-                gravityY: 1,
+                x: 0, y: 0, // these are passed in via emitzone below
+                frequency: 100, quantity: 1, lifespan: 1000, gravityY: 1,
                 scale: { start: 0, end: 0.13, ease: 'Quad.easeOut' },
                 alpha: { start: 1, end: 0, ease: 'Quad.easeIn' },
                 blendMode: 'ADD',
@@ -1839,6 +1977,46 @@ var vars = {
             let clamped = vars.clamp(a,1,max);
             let particleCount = vars.clamp(~~(clamped/max*1024),192,1024); // I could just return this but its less clear, so it stays
             return particleCount;
+        },
+
+        jewelExplosionInit: ()=> {
+            vars.particles.available.jewelExplode = scene.add.particles('diamonds').setDepth(255);
+            vars.particles.available.jewelExplode.createEmitter({
+                frame: ['blue1', 'blue2', 'blue3', 'red1', 'red2', 'red3'],
+                lifespan: 1500,
+                gravityY: 700,
+                quantity: 5, // this is actually the max quantity as quantity is requested at run time
+                speedX: { start: -200, end: 200, steps: 5 },
+                speedY: -500,
+                bounce: 0.3,
+                alpha: { start: 1, end: 0.3, ease: 'Quint.easeIn' },
+                scale: { start: 1, end: 0.7, ease: 'Quad.easeIn' },
+                bounds: vars.particles.bounds,
+                on: false
+            });
+        },
+
+        jewelExplosionDo: (x=0,y=0)=> {
+            let rndInt = Phaser.Math.RND;
+            let jewelCount = rndInt.between(3,5);
+            vars.particles.available.jewelExplode.emitParticleAt(x,y,jewelCount);
+        },
+
+        pointerParticles: ()=> {
+            document.querySelector('canvas').style.cursor='none';
+            vars.particles.available.pointer = scene.add.particles('pointerSparks').setDepth(consts.depths.pointer-1).createEmitter({
+                x: 400,
+                y: 300,
+                frame: 'red',
+                speed: { min: -100, max: 100 },
+                angle: { min: -120, max: -60 },
+                scale: { min: 0.05, max: 0.5 },
+                alpha: { start: 0.5, end: 0 },
+                blendMode: 'ADD',
+                gravityY: 10,
+                lifespan: 1000
+            });
+            vars.particles.available.pointer.reserve(1000);
         },
 
         rainInit: ()=> {
@@ -1993,6 +2171,18 @@ var vars = {
                 vars.UI.showMessage(msg, 1000, true);
             }
 
+            // update the pointer sparks
+            pV.current===1 ? vars.particles.available.pointer.setFrame('red') : vars.particles.available.pointer.setFrame('blue');
+            vars.phaserObject.quickGet('pointer').setFrame(`pointerP${pV.current}`);
+
+            if (pV.current===2 && pV.p2Face==='CPU') {
+                vars.phaserObject.quickGet('pointer').setAlpha(0);
+                //vars.particles.available.pointer.setAlpha(0);
+            } else {
+                vars.phaserObject.quickGet('pointer').setAlpha(1);
+                //vars.particles.available.pointer.setAlpha(1);
+            }
+
             // reset the player vars
             vars.player.pointsTotal=0;
             vars.player.diceComplete=0;
@@ -2077,11 +2267,15 @@ var vars = {
             let diceDepth = dC.dice;
             let counterDepth = dC.counters;
             let msgDepth = dC.message;
+            let cV = vars.canvas;
 
             // draw the background (game board)
-            scene.add.image(vars.canvas.cX, vars.canvas.cY, 'sandBG').setInteractive().setName('sandBG').setDepth(dC.sand);
-            scene.add.image(vars.canvas.cX, vars.canvas.cY, 'sandMask').setName('wetSand').setDepth(dC.sand+1).setAlpha(0);
-            scene.add.image(vars.canvas.cX, vars.canvas.cY, 'boardBG').setInteractive().setName('gameBoard').setDepth(boardDepth);
+            scene.add.image(cV.cX, cV.cY, 'sandBG').setInteractive().setName('sandBG').setDepth(dC.sand);
+            scene.add.image(cV.cX, cV.cY, 'sandMask').setName('wetSand').setDepth(dC.sand+1).setAlpha(0);
+            scene.add.image(cV.cX, cV.cY, 'boardBG').setInteractive().setName('gameBoard').setDepth(boardDepth);
+
+            // lightning strike sprite
+            //scene.add.image(vars.canvas.cX, vars.canvas.cY, 'lightningStrike').setName('lightningStrike').setDepth(boardDepth).setAlpha(0);
 
             // add game PLAYER FACES
             let pfPos = consts.positions.playerFace;
@@ -2109,7 +2303,7 @@ var vars = {
             })
 
             // now the counter for after the dice has been rolled
-            scene.add.text(1575, 775, '4').setColor('red').setName('pointsCount').setFontSize(96).setScale(3).setFontStyle('bold').setFontFamily('Consolas').setAlign('center').setAlpha(0).setDepth(diceDepth+1).setOrigin(0.5).setShadow(2,2,'#000',3);
+            scene.add.text(1675, 775, '4').setColor('red').setName('pointsCount').setFontSize(96).setScale(3).setFontStyle('bold').setFontFamily('Consolas').setAlign('center').setAlpha(0).setDepth(diceDepth+1).setOrigin(0.5).setShadow(2,2,'#000',3);
 
             // animate the shadows
             // drop the dice into place
@@ -2129,13 +2323,24 @@ var vars = {
             })
             // END OF COUNTERS
 
+            // scores
+            let y = 820;
+            scene.add.image(1220,y+40,'scoreBlocks').setDepth(diceBGDepth);
+            scene.add.text(1093, y, '0', { fontSize: '100px', fontStyle: 'bold', stroke: '#9C4534', strokeThickness: 5 } ).setName('p1score').setDepth(diceBGDepth+1).setAngle(-2);
+            scene.add.text(1280, y, '0', { fontSize: '100px', fontStyle: 'bold', stroke: '#1A4792', strokeThickness: 5 } ).setName('p2score').setDepth(diceBGDepth+1).setAngle(2);
+
             // pop up bg
-            scene.add.image(vars.canvas.cX, vars.canvas.cY, 'whitePixel').setName('popupBG').setTint('#000').setScale(vars.canvas.width, vars.canvas.height).setDepth(msgDepth-1).setAlpha(0);
+            scene.add.image(cV.cX, cV.cY, 'whitePixel').setName('popupBG').setTint('#000').setScale(vars.canvas.width, vars.canvas.height).setDepth(msgDepth-1).setAlpha(0);
             //scene.add.text(vars.canvas.cX, vars.canvas.cY, '...').setName('popupText').setColor('#ff0').setFontSize(96).setFontStyle('bold').setFontFamily('Consolas').setAlign('center').setAlpha(0).setDepth(msgDepth).setShadow(8,8,'#000',2);
-            scene.add.bitmapText(vars.canvas.cX, vars.canvas.cY, 'defaultFont', '...', 128, 1).setAlpha(0).setName('popupText').setDepth(msgDepth).setOrigin(0.5);
+            scene.add.bitmapText(cV.cX, cV.cY, 'defaultFont', '...', 128, 1).setAlpha(0).setName('popupText').setDepth(msgDepth).setOrigin(0.5);
 
             // barrier for a4
             vars.animate.initBarrier();
+
+            // play again pop up
+            let offY = 20;
+            scene.add.image(cV.cX, cV.height-offY, 'playAgain', 'playAgainBorder').setName('playAgainBG').setDepth(msgDepth+2).setOrigin(0.5,1).setAlpha(0);
+            scene.add.image(cV.cX, cV.height-140-offY, 'playAgain', 'playAgain').setName('playAgain').setDepth(msgDepth+3).setOrigin(0.5,1).setAlpha(0);
         },
 
         initOptionsScreen: ()=> {
@@ -2310,8 +2515,18 @@ var vars = {
             vars.animate.pointsCount(pC, true);
         },
 
-        showStartScreen: ()=> {
-            
+        hidePopUp: (qg)=> {
+            console.log(`Hiding the pop up message`);
+            let bg = qg('popupBG');
+            let msg = qg('popupText');
+            let playerFace = qg(`opt_p${vars.player.current}i`);
+
+            scene.tweens.add({
+                targets: [bg,msg,playerFace],
+                alpha: 0,
+                duration: 500
+            })
+
         },
 
         showVolumeOptions: (_show=true)=> {

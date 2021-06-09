@@ -7,6 +7,8 @@ vars.init = (stage=1)=> { // ENTRY POINT IS HERE
     }
 
     if (stage===2) { // creation
+        // init the cursor pointer
+        scene.add.image(vars.canvas.cX, vars.canvas.cY, 'pointers','pointerP1').setName('pointer').setDepth(consts.depths.pointer).setOrigin(0); // this should be on top of everything.
         v.containers.init(); // set up containers
         v.groups.init(); // set up groups
 
@@ -152,26 +154,32 @@ vars.files = {
 
     images: {
         init: ()=> {
-            scene.load.image('sandBG',         'images/sand.jpg');
-            scene.load.image('sandMask',       'images/sandMask.png');
             scene.load.image('boardBG',        'images/board.png');
-            scene.load.image('playButtonBG',   'images/playButtonBG.jpg');
             scene.load.image('loadedBG',       'images/loadedScreen.jpg');
             scene.load.image('loadedButton',   'images/loaded.png');
+            scene.load.image('playButtonBG',   'images/playButtonBG.jpg');
+            scene.load.image('sandBG',         'images/sand.jpg');
+            scene.load.image('sandMask',       'images/sandMask.png');
+            scene.load.image('scoreBlocks',    'images/scoreBlocks.png');
             scene.load.image('shielded',       'images/shielded.png');
             scene.load.image('whitePixel',     'images/whitePixel.png');
-
-            scene.load.atlas('clouds',         'images/atmos/clouds.png',  'images/atmos/clouds.json');
-            scene.load.atlas('counters',       'images/counters.png',      'images/counters.json');
-            scene.load.atlas('dice',           'images/dice.png',          'images/dice.json');
-            scene.load.atlas('options',        'images/optionImages.png',  'images/optionImages.json');
-            scene.load.atlas('optionsVolume',  'images/optionsVolume.png', 'images/optionsVolume.json');
-            scene.load.atlas('fullScreenBtn',  'images/screenMaxMin.png',  'images/screenMaxMin.json');
+            
+            scene.load.atlas('clouds',         'images/atmos/clouds.png',   'images/atmos/clouds.json');
+            scene.load.atlas('counters',       'images/counters.png',       'images/counters.json');
+            scene.load.atlas('dice',           'images/dice.png',           'images/dice.json');
+            scene.load.atlas('lightning',      'images/atmos/lightning.png','images/atmos/lightning.json');
+            scene.load.atlas('options',        'images/optionImages.png',   'images/optionImages.json');
+            scene.load.atlas('optionsVolume',  'images/optionsVolume.png',  'images/optionsVolume.json');
+            scene.load.atlas('playAgain',      'images/playAgain.png',      'images/playAgain.json');
+            scene.load.atlas('pointers',       'images/pointers.png',       'images/pointers.json');
+            scene.load.atlas('fullScreenBtn',  'images/screenMaxMin.png',   'images/screenMaxMin.json');
 
             // particles
-            //scene.load.image('diamondInTheRough', 'particles/whiteFlare.png');
             scene.load.image('diamondInTheRough', 'particles/whiteFlare.png');
             scene.load.image('sandParticleImage', 'particles/whiteSmall.png');
+
+            scene.load.atlas('diamonds',       'particles/diamonds.png',      'particles/diamonds.json');
+            scene.load.atlas('pointerSparks',  'particles/pointerSparks.png', 'particles/pointerSparks.json');
 
             if (vars.DEBUG) {
                 scene.load.spritesheet('debugBoardPieces', 'images/debugBoardPieces-ext.png', { frameWidth: 30, frameHeight: 30, spacing: 2, margin: 1 })
@@ -189,6 +197,8 @@ vars.groups = {
         scene.groups = {};
         scene.groups.whiteCounters = scene.add.group().setName('whiteCountersGroup');
         scene.groups.blackCounters = scene.add.group().setName('blackCountersGroup');
+
+        scene.groups.lightning = scene.add.group().setName('lightningGroup');
 
         scene.groups.errorScreen = scene.add.group().setName('errorScreen');
         scene.groups.debug = scene.add.group().setName('debugGroup');

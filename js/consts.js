@@ -42,9 +42,19 @@ const consts = {
         positions: [[1600,700], [1750,700], [1600,840], [1750,840]]
     },
 
+    defaultLightningHits: [
+        [-492, 750 ],
+        [-535, 1001],
+        [ -86, 1047],
+        [   2, 1037],
+        [ 472, 1006],
+        [ 753, 1001],
+        [ 851,  782]
+    ],
+
     depths: {
-        debug: 250,
-        error: 255, // basically if an error screen is shown, its on top of everything else for obvious reasons
+        debug: 255,
+        error: 100, // basically if an error screen is shown, its on top of everything else for obvious reasons
         sand: 1,
         countersComplete: 2, // depth of counters when they get to their finish position
         board: 10,
@@ -56,7 +66,8 @@ const consts = {
         loading: 50,
         message: 80,
         volumeOptions: 70,
-        weather: 30
+        weather: 30,
+        pointer: 150,
     },
 
     durations: {
