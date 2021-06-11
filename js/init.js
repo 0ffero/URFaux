@@ -73,7 +73,7 @@ function preload() {
     scene = this;
 
     // add the vignette
-    let vig = scene.add.image(vars.canvas.cX, vars.canvas.cY, 'vignette').setTint(0x000000).setDepth(255).setName('vignette').setAlpha(0);
+    let vig = scene.add.image(vars.canvas.cX, vars.canvas.cY, 'vignette').setTint(0x000000).setDepth(consts.depths.vignette).setName('vignette').setAlpha(0);
     vars.animate.vignetteShow(vig);
 
     // set up the loading progress bar

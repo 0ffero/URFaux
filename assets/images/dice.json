@@ -5,115 +5,115 @@
 			"frame": {
 				"x": 1,
 				"y": 1,
-				"w": 176,
-				"h": 155
+				"w": 132,
+				"h": 117
 			},
 			"rotated": false,
 			"trimmed": false,
 			"spriteSourceSize": {
 				"x": 0,
 				"y": 0,
-				"w": 176,
-				"h": 155
+				"w": 132,
+				"h": 117
 			},
 			"sourceSize": {
-				"w": 176,
-				"h": 155
+				"w": 132,
+				"h": 117
 			}
 		},
 		{
 			"filename": "dice2",
 			"frame": {
-				"x": 1,
-				"y": 158,
-				"w": 176,
-				"h": 155
+				"x": 135,
+				"y": 1,
+				"w": 132,
+				"h": 117
 			},
 			"rotated": false,
 			"trimmed": false,
 			"spriteSourceSize": {
 				"x": 0,
 				"y": 0,
-				"w": 176,
-				"h": 155
+				"w": 132,
+				"h": 117
 			},
 			"sourceSize": {
-				"w": 176,
-				"h": 155
+				"w": 132,
+				"h": 117
 			}
 		},
 		{
 			"filename": "dice3",
 			"frame": {
-				"x": 179,
-				"y": 1,
-				"w": 176,
-				"h": 155
+				"x": 1,
+				"y": 120,
+				"w": 132,
+				"h": 117
 			},
 			"rotated": false,
 			"trimmed": false,
 			"spriteSourceSize": {
 				"x": 0,
 				"y": 0,
-				"w": 176,
-				"h": 155
+				"w": 132,
+				"h": 117
 			},
 			"sourceSize": {
-				"w": 176,
-				"h": 155
+				"w": 132,
+				"h": 117
 			}
 		},
 		{
 			"filename": "dice4",
 			"frame": {
-				"x": 179,
-				"y": 158,
-				"w": 177,
-				"h": 155
+				"x": 135,
+				"y": 120,
+				"w": 132,
+				"h": 117
 			},
 			"rotated": false,
 			"trimmed": false,
 			"spriteSourceSize": {
 				"x": 0,
 				"y": 0,
-				"w": 177,
-				"h": 155
+				"w": 132,
+				"h": 117
 			},
 			"sourceSize": {
-				"w": 177,
-				"h": 155
+				"w": 132,
+				"h": 117
 			}
 		},
 		{
 			"filename": "diceBG",
 			"frame": {
-				"x": 1,
-				"y": 314,
-				"w": 177,
-				"h": 155
+				"x": 269,
+				"y": 1,
+				"w": 132,
+				"h": 117
 			},
 			"rotated": false,
 			"trimmed": false,
 			"spriteSourceSize": {
 				"x": 0,
 				"y": 0,
-				"w": 177,
-				"h": 155
+				"w": 132,
+				"h": 117
 			},
 			"sourceSize": {
-				"w": 177,
-				"h": 155
+				"w": 132,
+				"h": 117
 			}
 		}
 	],
 	"meta": {
 		"app": "http://www.codeandweb.com/texturepacker",
 		"version": "1.0",
-		"image": "spritesheet.png",
+		"image": "dice.png",
 		"format": "RGBA8888",
 		"size": {
-			"w": 357,
-			"h": 314
+			"w": 402,
+			"h": 238
 		},
 		"scale": "1"
 	}

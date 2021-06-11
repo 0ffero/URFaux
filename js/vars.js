@@ -1,7 +1,7 @@
 var vars = {
     DEBUG: false,
 
-    version: '0.99.b1.2',
+    version: '0.99.b1.3',
 
     clamp: Phaser.Math.Clamp,
 
@@ -231,7 +231,7 @@ var vars = {
             if (vars.DEBUG) { dur=0; }
             _targets.forEach( (_t,i)=>{
                 scene.tweens.add({
-                    targets: _t, scale: 0.75, duration: dur, delay: dur*i, ease: 'Quint.easeIn',
+                    targets: _t, scale: 1, duration: dur, delay: dur*i, ease: 'Quint.easeIn',
                     onComplete: ()=> { vars.audio.playSound('sandHit'); vars.particles.available.sand.emitParticleAt(_t.x, _t.y); }
                 })
             })
@@ -253,7 +253,7 @@ var vars = {
             // fade
             let alpha = _out ? 0.5 : 1;
             diceArray.forEach( (_d)=> {
-                scene.tweens.add({ targets: _d, alpha: alpha, duration: 500, delay: 1000 })
+                scene.tweens.add({ targets: _d, alpha: alpha, duration: 250, delay: 750 })
             })
         },
 
@@ -272,26 +272,10 @@ var vars = {
             scene.tweens.add({ targets: pF, alpha: alpha, duration: 500 })
         },
 
-        faceToCentre: ()=> { // the next 2 functions arent needed any more, as the UI has an update that shows the players face.
-            /*
-            vars.DEBUG ? console.log('Sending player face to centre x.') : null;
-            let pf = vars.phaserObject.quickGet('playerFace');
-            let o = pf.width/2;
-            scene.tweens.add({ targets: pf, x: vars.canvas.cX-o, duration: 2000, ease: 'Quad' })
-            */
-        },
-
-        faceToStartPosition: ()=> {
-            /*
-            let pfPos = consts.positions.playerFace;
-            let pf = vars.phaserObject.quickGet('playerFace');
-            scene.tweens.add({ targets: pf, x: pfPos[0], duration: 2000, ease: 'Quad' })
-            */
-        },
-
-        fadeTheThing: (_object=null, _duration=1000)=> {
+        fadeTheThing: (_object=null, _duration=1000, _fade=true)=> {
             if (_object===null) { return false; }
-            scene.tweens.add({ targets: _object, alpha: 0, duration: _duration })
+            let alpha = _fade ? 0 : 1;
+            scene.tweens.add({ targets: _object, alpha: alpha, duration: _duration })
         },
 
         initBarrier: ()=> {
@@ -299,7 +283,7 @@ var vars = {
             let delay = 10;
             let a = scene.add.image(1047, 251, 'shielded').setName('shield_1').setDepth(depth).setAlpha(0.3).setTint(0xff0000);
             // set the shields data
-            a.setData({ h: 0, rev: false, currentDelay: delay, maxDelay: delay });
+            a.setData({ s: 0.5, rev: false, currentDelay: delay, maxDelay: delay, currentHue: 0 }); // the current (default) hue is red (player 1's colour) although this will change before displaying the shield based on counter colour occupying a4
 
             let aV = vars.animate;
             aV.shieldTween = scene.tweens.add({
@@ -313,20 +297,19 @@ var vars = {
                     // we only get here if the delay is 0
                     // so, reset that delay
                     _o.setData('currentDelay', _o.getData('maxDelay'));
-                    // and update the colour of the shield
-                    let rev = _o.getData('rev'); let colour = _o.getData('h');
-                    rev ? colour-- : colour++ ;
-                    _o.setData('h', colour);
-                    let color = new Phaser.Display.Color.HSLToColor(colour/256, 1, 0.50).color;
-                    _o.setTint(color);
 
+                    // UPDATE THE COLOUR OF THE SHIELD
+                    let rev = _o.getData('rev'); let colour = _o.getData('s'); let currentHue = _o.getData('currentHue');
+                    rev ? colour-=0.01 : colour+=0.01;
+                    // UPDATE THE COLOUR VARIABLE
+                    _o.setData('s', colour);
+
+                    // GENERATE COLOUR FROM OBJECTS DATA
+                    let color = new Phaser.Display.Color.HSLToColor(currentHue, 1, colour).color;
+                    _o.setTint(color);
+                    
                     // is the new colour 0 or maxCol? if so reverse the counter direction
-                    let maxCol = consts.colours.shieldMaxColour;
-                    if (maxCol!==255) {
-                        colour===0 || colour===maxCol ? _o.setData('rev', !rev) : null;
-                    } else {
-                        colour===maxCol ? _o.setData('h', 0) : null;
-                    }
+                    if (colour>=0.8 || colour<=0.5) { _o.setData('rev', !rev) }
                 }
             });
 
@@ -543,9 +526,15 @@ var vars = {
 
         showBarrier: (_show=true, _init=false)=> { // this deals with showing and hiding the barrier
             // when a players counter lands on "a4" a barrier shows. when they move away from it the barrier hides
-            vars.DEBUG ? console.log(`${_init ? '' : 'Player has landed on a4.' }${_show ? 'Showing' : 'Hiding' } barrier.`) : null;
-            vars.phaserObject.quickGet('shield_1').setVisible(_show);
-            _show ? vars.animate.shieldTween.resume() : vars.animate.shieldTween.pause();
+            vars.DEBUG ? console.log(`${_init ? '' : 'Player has landed on a4. '}${_show ? 'Showing' : 'Hiding' } barrier.`) : null;
+            let hueForCounter = vars.boardPositions.a4.counterName.includes('w_') ? 0 : ~~(208/360*100)/100;
+            vars.phaserObject.quickGet('shield_1').clearTint().setVisible(_show).setData('currentHue', hueForCounter);
+
+            // start/stop the tween
+            _show ? vars.animate.shieldTween.resume()   : vars.animate.shieldTween.pause();
+            // start/stop the particles
+            let cName = vars.boardPositions.a4.counterName;
+            _show ? vars.particles.shieldSwitchColour(cName) : vars.particles.shieldEnable(false);
             //vars.phaserObject.quickGet('shield_2').setVisible(_show);
         },
 
@@ -582,12 +571,7 @@ var vars = {
         },
 
         showOptions: (_show=true)=> {
-            // first, set the depth of the player face
-            let pF = vars.phaserObject.quickGet('playerFace');
-            let d = _show ? consts.depths.optionsScreen-2 : consts.depths.message+1;
-            pF.setDepth(d);
-
-            // now fade in/out the options
+            // fade in/out the options
             let alpha = _show ? 1: 0;
             let duration = 500;
             scene.groups.options.children.each( (_o)=> {
@@ -743,7 +727,7 @@ var vars = {
             // start the timer if it hasnt been
             console.log(`Lightning Strike`);
             vars.camera.mainCam.flashEffect.start(3000);
-            //vars.animate.lightningStrike();
+            vars.animate.lightningStrike();
 
             if (!vars.atmos.timer) {
                 console.log(`Initialising Storm Timer`);
@@ -1158,8 +1142,12 @@ var vars = {
                     vars.player.diceComplete++;
 
                     if (vars.player.diceComplete===4) { // all dice have been counted
+                        // fade out the dice
                         vars.animate.diceFadeOut();
                         console.groupEnd();
+
+                        // stop the dice highlight
+                        vars.particles.diceHighlightOnOff(false);
 
                         if (vars.force!==undefined) { // if dice force is enabled
                             if (vars.force!==-1) {
@@ -1190,8 +1178,10 @@ var vars = {
                             let players = vars.player.getCurrent();
                             let msg = `Player ${players[1]}, roll the dice.`;
                             // reset the player variables
-                            vars.player.nextPlayer('skip');
                             vars.UI.showMessage(msg, 2000, true);
+                            setTimeout( ()=> {
+                                vars.player.nextPlayer('skip');
+                            }, 2000)
                             return false;
                         }
 
@@ -1623,13 +1613,21 @@ var vars = {
             
         },
 
+        highlightCounter: (_cName, _enable=true)=> {
+            let qg = vars.phaserObject.quickGet;
+            if (qg(_cName).getData('moveTo')!=='') {
+                let colour = _cName.includes('w_') ? 0xff0000 : 0x4DD2FE;
+                _enable ? vars.graphics.highlightObject(_cName, colour) : vars.graphics.highlightedObjectReset(_cName);
+            }
+        },
+
         highlightObject: (_oName, _glow=0x000080, _thick=6)=> {
             if (_oName==='optPlay') { _glow = 0x4DD2FF; _thick=3; }
             // grab it
             let gameObject = vars.phaserObject.quickGet(_oName);
             // highlight it
             scene.plugins.get('rexoutlinepipelineplugin').add(gameObject).setOutlineColor(_glow).setThickness(_thick);
-            // remember it
+            // remember it (required in case objects overlap each other)
             vars.graphics.highlighted = _oName;
         },
 
@@ -1660,7 +1658,9 @@ var vars = {
             vars.DEBUG ? console.log('  .. 🎮 initialising input and vars') : null;
             scene.input.on('pointermove', function (pointer) {
                 vars.phaserObject.quickGet('pointer').setPosition(pointer.x, pointer.y);
-                vars.particles.available.pointer.setPosition(pointer.x, pointer.y);
+                vars.particles.available.pointer.setPosition(pointer.x+15, pointer.y+30);
+                let cpuP = vars.particles.available.pointerCPU;
+                cpuP.emitters.list[0].on ? cpuP.setPosition(pointer.x+15, pointer.y+30): null;
             });
             vars.DEBUG ? vars.input.enableCombos() : null;
             scene.input.on('gameobjectdown', function (pointer, gameObject) {
@@ -1685,6 +1685,32 @@ var vars = {
                     }
                     return false;
                 }
+
+                if (oName.includes('opt')) {
+                    if (oName.includes('Arrow')) {
+                        if (!gameObject.getData('over')) {
+                            vars.DEBUG? console.log(`Moved over a button (${oName}) - attaching tween`) : null;
+                            gameObject.setData('over',true);
+                            vars.animate.hovering = scene.tweens.add({ targets: gameObject, scale: 1.1, duration: 250, yoyo: true, repeat: -1 })
+                        }
+                    }
+                }
+
+                if (oName === 'loadedButton' || oName === 'optPlay') {
+                    vars.graphics.highlightObject(oName);
+                } else if (oName.includes('counter')) {
+                    vars.graphics.highlightCounter(oName);
+                }
+
+                if (oName ==='volOptBG') {
+                    if (scene.containers.volumeOptions!==undefined) {
+                        if (scene.containers.volumeOptions.y===vars.canvas.height-10) {
+                            vars.animate.showVolumeOptions(true);
+                        }
+                    }
+                }
+
+
                 // DEBUG STUFF
                 if (vars.DEBUG) {
                     quickGet('overDebugText').setText(`Over: ${oName}`);
@@ -1700,28 +1726,6 @@ var vars = {
                         msg = 'DATA: N/A'
                     }
                     quickGet('overDataDebugText').setText(msg);
-                }
-
-                if (oName.includes('opt')) {
-                    if (oName.includes('Arrow')) {
-                        if (!gameObject.getData('over')) {
-                            vars.DEBUG? console.log(`Moved over a button (${oName}) - attaching tween`) : null;
-                            gameObject.setData('over',true);
-                            vars.animate.hovering = scene.tweens.add({ targets: gameObject, scale: 1.1, duration: 250, yoyo: true, repeat: -1 })
-                        }
-                    }
-                }
-
-                if (oName === 'loadedButton' || oName === 'optPlay') {
-                    vars.graphics.highlightObject(oName);
-                }
-
-                if (oName ==='volOptBG') {
-                    if (scene.containers.volumeOptions!==undefined) {
-                        if (scene.containers.volumeOptions.y===vars.canvas.height-10) {
-                            vars.animate.showVolumeOptions(true);
-                        }
-                    }
                 }
             });
 
@@ -1741,6 +1745,8 @@ var vars = {
 
                 if (oName === 'loadedButton' || oName === 'optPlay') {
                     vars.graphics.highlightedObjectReset(oName);
+                } else if (oName.includes('counter')) {
+                    vars.graphics.highlightCounter(oName, false);
                 }
 
                 if (vars.animate.hovering===null) { return false; }
@@ -1932,6 +1938,13 @@ var vars = {
             pV.jewelExplosionInit();
 
             pV.pointerParticles();
+            pV.pointerCPUInit();
+
+            pV.diceHighlightInit();
+
+            // shield
+            pV.shieldInit();
+
 
             // this can be enabled to test particle emitters
             /* scene.input.on('pointerdown', function (pointer) {
@@ -1953,6 +1966,42 @@ var vars = {
             });
         },
 
+        diceHighlightInit: ()=> {
+            let tri = new Phaser.Geom.Triangle(1597,642, 1668,760, 1531,760); // position of die 1
+
+            vars.particles.available.dice = scene.add.particles('sandParticleImage').setDepth(255);
+
+            // create the 4 emitters
+            let xy = [149,140]; // offsets for all dice
+            let xys = [ [0,0], [xy[0],0], [0,xy[1]], [xy[0],xy[1]] ]; // array of all x/y's
+            xys.forEach( (_xy)=> {
+                vars.particles.available.dice.createEmitter({
+                    x: _xy[0], y: _xy[1],
+                    frequency: 50, quantity: 1,
+                    scale: { start: 0.5, end: 0 },
+                    alpha: { start: 0.5, end: 0 },
+                    tint: 0xff0000, // this will be changed when player changes
+                    blendMode: 'ADD',
+                    emitZone: { type: 'edge', source: tri, quantity: 24, yoyo: false },
+                    on: false,
+                });
+            })
+        },
+
+        diceHighlightChangeColor: ()=> {
+            let cP = vars.player.current;
+            let tint = cP===1 ? 0xff0000 : 0x4DD2FE;
+            let emitters = vars.particles.available.dice.emitters.getAll();
+            emitters.forEach( (_e)=> {
+                _e.setTint(tint);
+            })
+        },
+
+        diceHighlightOnOff: (_on=true)=> {
+            let emitters = vars.particles.available.dice.emitters.getAll();
+            _on ? emitters.forEach( (_e)=> {_e.start() }) : emitters.forEach( (_e)=> { _e.stop() }); 
+        },
+
         diceGroundHitInit: ()=> {
             let depth = consts.depths.diceBG+1;
             vars.particles.available.sand = scene.add.particles('sandParticleImage').setDepth(depth);
@@ -1965,6 +2014,20 @@ var vars = {
                 quantity: 512,
                 scale: { start: 0.5, end: 0 },
                 on: false
+            });
+        },
+
+        diceSparkle: ()=> {
+            let depth = consts.depths.dice+1;
+            vars.particles.available.diceSparkle = scene.add.particles('diamondInTheRough').setDepth(depth);
+
+            vars.particles.available.diceSparkle.createEmitter({
+                x: 1480, y: 620, // these are passed in via emitzone below
+                quantity: 2, lifespan: 666, gravityY: 1,
+                scale: { start: 0, end: 0.5, ease: 'Quad.easeOut' },
+                alpha: { start: 1, end: 0, ease: 'Quad.easeIn' },
+                blendMode: 'ADD',
+                emitZone: { type: 'random', source: vars.phaserObject.dice }
             });
         },
 
@@ -2002,18 +2065,32 @@ var vars = {
             vars.particles.available.jewelExplode.emitParticleAt(x,y,jewelCount);
         },
 
+        pointerCPUInit: ()=> {
+            let circle = new Phaser.Geom.Circle(0, 0, 20);
+
+            vars.particles.available.pointerCPU = scene.add.particles('pointerSparks').setDepth(255);
+            vars.particles.available.pointerCPU.createEmitter({
+                x: 0, y: 0,
+                tint: 0x4DD2FE,
+                scale: { start: 1, end: 0.2 },
+                alpha: { start: 1, end: 0 },
+                frequency: 50, quantity: 1, lifespan: 300,
+                blendMode: 'SCREEN',
+                emitZone: { type: 'edge', source: circle, quantity: 12, yoyo: false },
+                on: false,
+            });
+        },
+
         pointerParticles: ()=> {
             document.querySelector('canvas').style.cursor='none';
             vars.particles.available.pointer = scene.add.particles('pointerSparks').setDepth(consts.depths.pointer-1).createEmitter({
-                x: 400,
-                y: 300,
+                x: vars.canvas.width, y: vars.canvas.height,
                 frame: 'red',
-                speed: { min: -100, max: 100 },
+                speedX: 50, speedY: 100, gravityY: 10,
                 angle: { min: -120, max: -60 },
                 scale: { min: 0.05, max: 0.5 },
                 alpha: { start: 0.5, end: 0 },
                 blendMode: 'ADD',
-                gravityY: 10,
                 lifespan: 1000
             });
             vars.particles.available.pointer.reserve(1000);
@@ -2086,6 +2163,69 @@ var vars = {
                     console.error(`Object with name ${_oName} was not found!`);
                 }
             }
+        },
+
+        shieldEnable: (_enable=true)=> {
+            vars.particles.available.shield.emitters.getAll().forEach( (_e)=> {
+                _enable ? _e.start(): _e.stop();
+            })
+        },
+
+        shieldInit: ()=> {
+            let tint = 0x005299; // initially using the blue tint as its harder to remember than ff0000
+            let pT = Phaser.Geom.Point;
+            let allPoints = {}; let points = [];
+            points.push(new pT(915,315)); points.push(new pT(1045,245))
+            points.push(new pT(1175,320)); points.push(new pT(1045,400))
+            allPoints.bottomSquare = points;
+
+            points = [];
+            points.push(new pT(915,315-77)); points.push(new pT(1045,245-57));
+            points.push(new pT(1175,320-77)); points.push(new pT(1045,400-77));
+            allPoints.middleSquare = points;
+
+            points = [];
+            points.push(new pT(915,315-145)); points.push(new pT(1045,245-125));
+            points.push(new pT(1175,320-145)); points.push(new pT(1045,400-145));
+            allPoints.topSquare = points;
+
+            let pG = Phaser.Geom.Polygon;
+            rectangles = [];
+            rectangles.push(new pG(allPoints.bottomSquare));
+            rectangles.push(new pG(allPoints.middleSquare));
+            rectangles.push(new pG(allPoints.topSquare));
+
+            // add this to the particles
+            vars.particles.available.shield = scene.add.particles('diamondInTheRough').setDepth(consts.depths.shield+1);
+
+            // for each of the rectangles, create an emiiter
+            rectangles.forEach( (_rect)=> {
+                vars.particles.available.shield.createEmitter({
+                    x: 0, y: 0,
+                    tint: tint,
+                    scale: { start: 0.33, end: 0 },
+                    lifespan: 200,
+                    ease: 'Quad.easeInOut',
+                    blendMode: 'ADD',
+                    emitZone: { type: 'edge', source: _rect, quantity: 32 },
+                    on: false
+                });
+            })
+        },
+
+        shieldSwitchColour: (_counterName=false)=> {
+            if (!_counterName) { 
+                console.error(`You have to pass a counter name into this function!`);
+                return false;
+            }
+
+            let tint = _counterName.includes('w_') ? 0xff0000 : 0x005299; // the blue colour is hsl(208,1,0.5)
+            let pV = vars.particles;
+            pV.available.shield.emitters.getAll().forEach( (_e)=> {
+                _e.setTint(tint);
+            })
+            // enable the particles
+            pV.shieldEnable();
         }
     },
 
@@ -2175,12 +2315,22 @@ var vars = {
             pV.current===1 ? vars.particles.available.pointer.setFrame('red') : vars.particles.available.pointer.setFrame('blue');
             vars.phaserObject.quickGet('pointer').setFrame(`pointerP${pV.current}`);
 
-            if (pV.current===2 && pV.p2Face==='CPU') {
-                vars.phaserObject.quickGet('pointer').setAlpha(0);
-                //vars.particles.available.pointer.setAlpha(0);
+            let swapHL = false;
+            let CPU = false;
+            if (pV.current===2 && pV.p2Face==='CPU') { // should some UI elements be hidden as its the CPU's shot?
+                // ITS THE CPUs SHOT
+                CPU=true;
+                // hide the pointer
+                vars.animate.fadeTheThing(vars.phaserObject.quickGet('pointer'), 500)
+                // show the CPUs cursor
+                vars.particles.available.pointerCPU.emitters.list[0].start();
+                vars.particles.available.pointer.on=false;
             } else {
-                vars.phaserObject.quickGet('pointer').setAlpha(1);
-                //vars.particles.available.pointer.setAlpha(1);
+                // ITS THE PLAYERS SHOT
+                vars.animate.fadeTheThing(vars.phaserObject.quickGet('pointer'), 500, false)
+                vars.particles.available.pointerCPU.emitters.list[0].stop();
+                vars.particles.available.pointer.on=true;
+                swapHL = true;
             }
 
             // reset the player vars
@@ -2194,7 +2344,15 @@ var vars = {
             vars.UI.rollTextSwitch();
 
             setTimeout( ()=> {
+                // enable the dice
                 vars.game.diceEnable();
+                // change the colour of the dice highlight
+                if (swapHL) {
+                    vars.particles.diceHighlightChangeColor();
+                    // and show the highlight
+                    vars.particles.diceHighlightOnOff();
+                }
+
                 vars.animate.msgDuration=0;
             }, vars.animate.msgDuration);
 
@@ -2280,7 +2438,7 @@ var vars = {
             // add game PLAYER FACES
             let pfPos = consts.positions.playerFace;
             // figure out which image set we need
-            let pFace = scene.add.image(pfPos[0], pfPos[1], 'options', 'faceMale').setName('playerFace').setScale(0.66).setOrigin(0).setDepth(consts.depths.optionsScreen-2); // this depth changes when the game starts
+            let pFace = scene.add.image(pfPos[0], pfPos[1], 'options', 'faceMale').setName('playerFace').setScale(0.66).setOrigin(0).setDepth(consts.depths.playerFace); // this depth changes when the game starts
             scene.tweens.add({ targets: pFace, y: pFace.y-25, yoyo: true, repeat: -1, duration: 500, ease: 'Quad' })
 
             // draw the background for the dice area
@@ -2291,14 +2449,13 @@ var vars = {
             // DICE
             // draw the dice and animate them into position
             let alpha = consts.alphas.ZERO;
-            let scale = 0.75;
-            let diceScale = 5;
+            let diceScale = 5; // the dice fall in, so they start of BIG
 
             let positions = consts.dice.positions;
             let dropShadows = []
             let dice = []
             positions.forEach( (_p, _i)=> {
-                dropShadows.push(scene.add.image(_p[0], _p[1], 'dice').setFrame('diceBG').setName(`d${_i+1}_Shadow`).setScale(scale).setAlpha(alpha).setDepth(diceBGDepth));
+                dropShadows.push(scene.add.image(_p[0], _p[1], 'dice').setFrame('diceBG').setName(`d${_i+1}_Shadow`).setAlpha(alpha).setDepth(diceBGDepth));
                 dice.push(scene.add.image(_p[0], _p[1], 'dice').setName(`dice${_i+1}`).setScale(diceScale).setAlpha(alpha).setInteractive().setDepth(diceDepth).setData({ points: 1, rollNumber: 0 }));
             })
 
@@ -2341,6 +2498,10 @@ var vars = {
             let offY = 20;
             scene.add.image(cV.cX, cV.height-offY, 'playAgain', 'playAgainBorder').setName('playAgainBG').setDepth(msgDepth+2).setOrigin(0.5,1).setAlpha(0);
             scene.add.image(cV.cX, cV.height-140-offY, 'playAgain', 'playAgain').setName('playAgain').setDepth(msgDepth+3).setOrigin(0.5,1).setAlpha(0);
+
+            // change the colour of the dice highlight
+            vars.particles.diceHighlightChangeColor(); // this is required as youll eventually be able to continue a game. so the first player to go wont always be player 1
+            vars.particles.diceHighlightOnOff();
         },
 
         initOptionsScreen: ()=> {
@@ -2519,7 +2680,7 @@ var vars = {
             console.log(`Hiding the pop up message`);
             let bg = qg('popupBG');
             let msg = qg('popupText');
-            let playerFace = qg(`opt_p${vars.player.current}i`);
+            let playerFace = qg(`opt_p${vars.player.getCurrent[1]}i`); // THIS IS WRONG! THE PLAYER MUST HAVE BEEN UPDATED BEFORE NOW. TODO
 
             scene.tweens.add({
                 targets: [bg,msg,playerFace],

@@ -83,7 +83,7 @@ vars.containers = {
         scene.containers = {};
         let volCon = scene.containers.volumeOptions = scene.add.container().setName('volumeOptions').setData('visible', false);
         volCon.setPosition(0,vars.canvas.height-200);
-        volCon.setDepth(254);
+        volCon.setDepth(consts.depths.volumeOptions);
     }
 }
 
@@ -260,6 +260,19 @@ vars.phaserObject = {
     quickGet: (_oN=null)=> {
         if (_oN===null) { return false; }
         return scene.children.getByName(_oN);
+    }
+}
+
+vars.phaserObject.dice = {
+    getRandomPoint: function (vec) {
+        let x; let y; let pixel;
+        do {
+            x = Phaser.Math.Between(0, 175);
+            y = Phaser.Math.Between(0, 153);
+            pixel = scene.textures.getPixel(x, y, 'dice', 'diceBG');
+        } while (pixel.alpha < 255);
+
+        return vec.setTo(x,y);
     }
 }
 

@@ -22,23 +22,11 @@ vars.debugFN = {
     attackLaneInit: ()=> {
         console.groupCollapsed('Initialising counters...');
         let bPs = vars.boardPositions;
-        ['b3','a3','a4'].forEach( (_pos, _i)=> {
-            let cName = vars.player.counters.black.atStart.pop();
-            bPs[_pos].takenByPlayer=2;
-            bPs[_pos].counterName=cName;
-            let cO = vars.phaserObject.quickGet(cName);
-            cO.setData('boardPosition',_pos);
-            let x = bPs[_pos].x; let y = bPs[_pos].y;
-            let frame = _pos[0]==='a' ? `b${_pos}` : _pos;
-            cO.setAlpha(1).setPosition(x,y).setFrame(frame, true, true).setData({ x: x, y: y });
-            console.log(`  > Added black counter to position ${_pos}`);
-        }); // <-- this semi-colon is needed or else the white counters will fail o.0 (Im missing something, but cant figure out what)
-        // im assuming the interp is seeing something like
-        // [array].fE(()=>{})[newArray].fE(()=>{}) after removing whitespace
-        // and chrome (/browsers?) dont deal with it well.
 
-        ['w4','w2','a2'].forEach( (_a,_i)=> {
+        // place the white counters
+        ['w4','a2'].forEach( (_a,_i)=> {
             let cName = vars.player.counters.white.atStart.pop();// `counterw_${6-_i}`;
+            if (_a==='a4') { quickGet('shield_1').setData('currentHue', 0); vars.particles.shieldSwitchColour(cName); }
             bPs[_a].takenByPlayer=1;
             bPs[_a].counterName=cName;
             let aO = vars.phaserObject.quickGet(cName);
@@ -47,9 +35,24 @@ vars.debugFN = {
             let frame = _a[0]==='a' ? `w${_a}` : _a;
             aO.setAlpha(1).setPosition(x,y).setFrame(frame, true, true).setData({ x: x, y: y });
             console.log(`  > Added white counter to position ${_a}`);
-        })
+        });
+
+        // place the black counters
+        ['b3','a3','a4'].forEach( (_pos, _i)=> {
+            let cName = vars.player.counters.black.atStart.pop();
+            if (_pos==='a4') { quickGet('shield_1').setData('currentHue', ~~(208/360*100)/100); vars.particles.shieldSwitchColour(cName); }
+            bPs[_pos].takenByPlayer=2;
+            bPs[_pos].counterName=cName;
+            let cO = vars.phaserObject.quickGet(cName);
+            cO.setData('boardPosition',_pos);
+            let x = bPs[_pos].x; let y = bPs[_pos].y;
+            let frame = _pos[0]==='a' ? `b${_pos}` : _pos;
+            cO.setAlpha(1).setPosition(x,y).setFrame(frame, true, true).setData({ x: x, y: y });
+            console.log(`  > Added black counter to position ${_pos}`);
+        });
         console.groupEnd();
-        vars.debugFN.updateDebugBoard()
+        // update debug board
+        vars.debugFN.updateDebugBoard();
     },
 
     bounceTestCounters: ()=> {

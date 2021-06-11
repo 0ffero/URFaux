@@ -53,21 +53,23 @@ const consts = {
     ],
 
     depths: {
-        debug: 255,
-        error: 100, // basically if an error screen is shown, its on top of everything else for obvious reasons
         sand: 1,
         countersComplete: 2, // depth of counters when they get to their finish position
         board: 10,
-        counters: 15, // depth while counters are on the board
         diceBG: 12,
+        counters: 15, // depth while counters are on the board
         dice: 15,
         shield: 20,
-        optionsScreen: 40,
-        loading: 50,
-        message: 80,
-        volumeOptions: 70,
         weather: 30,
+        vignette: 35,
+        playerFace: 40,
+        optionsScreen: 45,
+        loading: 50,
+        volumeOptions: 70,
+        message: 80,
+        error: 100, // basically if an error screen is shown, its on top of everything else for obvious reasons
         pointer: 150,
+        debug: 255,
     },
 
     durations: {
