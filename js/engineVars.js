@@ -4,6 +4,7 @@ vars.init = (stage=1)=> { // ENTRY POINT IS HERE
     vars.DEBUG ? console.log(`%cInitialising Stage ${stage}`, 'color: #00f000; font-size: 14px;') : null;
     if (stage===1) { // preloader
         v.files.init(); // load all files
+        vars.graphics.infinityPointsGen();
     }
 
     if (stage===2) { // creation

@@ -1,3 +1,4 @@
+"use strict";
 var vars = {
     DEBUG: false,
 
@@ -383,7 +384,7 @@ var vars = {
                 let logText = kb ? `${~~(loadedPercent*100).toLocaleString()}% - Loaded ${fSName}. (Adding: ${(fS[fSName]/1000).toLocaleString()}KB to ${(before/1000).toLocaleString()}KB = ${(fFV.details.loadedSize/1000).toLocaleString()}KB of ${(tot/1000).toLocaleString()}KB)` : `${~~(loadedPercent*100)}% - Loaded ${fSName}. (Adding: ${(fS[fSName]).toLocaleString()} to ${before.toLocaleString()} = ${fFV.details.loadedSize.toLocaleString()} of ${tot.toLocaleString()})`;
                 // console loading bar
                 let led = '🞕'; let ling ='🞔';
-                loadingBarVar = vars.clamp(loadedPercent,0.1,1)*10;
+                let loadingBarVar = vars.clamp(loadedPercent,0.1,1)*10;
                 let lText='';
                 for (let lB=1; lB<11; lB++) {
                     lText += loadingBarVar < lB ? ling : led;
@@ -681,8 +682,8 @@ var vars = {
 
         },
 
-        generateCloud: (_object=null)=> {
-            if (_object===null) {
+        generateCloud: (_object)=> {
+            if (_object===undefined) {
                 console.error(`You need to pass the cloud into this function... idiot.`);
                 return false;
             }
@@ -970,7 +971,7 @@ var vars = {
         },
 
         say: ()=> {
-            _sentence=vars.audio.sentence;
+            let _sentence=vars.audio.sentence;
             // this takes an array (or 'sentence') and says each word one after the other
             if (Array.isArray(_sentence) && _sentence.length!==0) {
                 let aV = vars.audio;
@@ -1587,6 +1588,19 @@ var vars = {
 
     graphics: {
         highlighted: null,
+        infinityPoints: [],
+        infinity: {
+            getPoints: function () {
+                let infinityPoints = [];
+                for (let t=0; t<Phaser.Math.PI2; t+=0.1) {
+                    let scale = 2 / (3 - Math.cos(2*t));
+                    let x = ~~(scale * Math.cos(t) * 500)/10;
+                    let y = ~~(scale * Math.sin(2*t)/2*500)/10;
+                    infinityPoints.push(new Phaser.Geom.Point(x,y));
+                }
+                return infinityPoints;
+            }
+        },
 
         progress: {
             bar: {
@@ -1599,6 +1613,19 @@ var vars = {
                 width: 640,
                 height: 50
             }
+        },
+
+        infinityPointsGen: ()=> {
+            // were currently using the infinity symbol as a point set (v.g.infinity)
+            /*
+            let infinityPoints = vars.graphics.infinityPoints;
+            for (let t=0; t<2*Math.PI; t+=2*Math.PI/50) {
+                let scale = 2 / (3 - Math.cos(2*t));
+                let x = ~~(scale * Math.cos(t) * 1000)/10;
+                let y = ~~(scale * Math.sin(2*t)/2*1000)/10;
+                infinityPoints.push(new Phaser.Geom.Point(x,y));
+            }
+            */
         },
 
         glowObject: ()=> {
@@ -1621,8 +1648,7 @@ var vars = {
             }
         },
 
-        highlightObject: (_oName, _glow=0x000080, _thick=6)=> {
-            if (_oName==='optPlay') { _glow = 0x4DD2FF; _thick=3; }
+        highlightObject: (_oName, _glow=0x4DD2FF, _thick=3)=> {
             // grab it
             let gameObject = vars.phaserObject.quickGet(_oName);
             // highlight it
@@ -1640,12 +1666,22 @@ var vars = {
                 scene.plugins.get('rexoutlinepipelineplugin').remove(gameObject);
             } else {
                 console.error(`Highlighted object sent to updater (${_oName}) is not the same as the h var (${highlighted})`);
+                // this happens every so often and its generally a counter that hasnt had the outline removed
+                // every counter is reset now when the player clicks a counter
                 debugger;
             }
         },
 
         particleBounds: ()=>{
             vars.particles.bounds = new Phaser.Geom.Rectangle(0, 0, 1920, 1080-10);
+        },
+
+        unHighlightCounters: ()=> {
+            let cSet = vars.player.current===1 ? 'white' : 'black';
+            let rex = scene.plugins.get('rexoutlinepipelineplugin');
+            scene.groups[`${cSet}Counters`].children.each( (_c)=> {
+                rex.remove(_c);
+            })
         }
 
     },
@@ -1797,15 +1833,12 @@ var vars = {
                 vars.audio.loadStream();
 
             } else if (oName.includes('counter')) {
+                // remove all highlights
+                vars.graphics.unHighlightCounters();
+                // start the move animation
                 vars.animate.counterToNewPosition(gameObject);
             } else if (oName === 'popupBG') {
-                // we no longer allow the player to click the background as theres a specific 'play again' button now
-                // this is the pop up background
-                /* if (vars.player.win) {
-                    // restart the game
-                    vars.game.restart();
-                } else {
-                } */
+                // No longer does anything
                 console.warn(`Pop up background was clicked. This no longer does anything`);
             } else if (oName.includes('Arrow')) {
                 vars.audio.playSound('menuClick');
@@ -2066,18 +2099,15 @@ var vars = {
         },
 
         pointerCPUInit: ()=> {
-            let circle = new Phaser.Geom.Circle(0, 0, 20);
+            vars.particles.available.pointerCPU = scene.add.particles('diamondInTheRough').setDepth(300);
 
-            vars.particles.available.pointerCPU = scene.add.particles('pointerSparks').setDepth(255);
             vars.particles.available.pointerCPU.createEmitter({
                 x: 0, y: 0,
                 tint: 0x4DD2FE,
-                scale: { start: 1, end: 0.2 },
-                alpha: { start: 1, end: 0 },
-                frequency: 50, quantity: 1, lifespan: 300,
+                scale: { start: 0.4, end: 0 },
                 blendMode: 'SCREEN',
-                emitZone: { type: 'edge', source: circle, quantity: 12, yoyo: false },
-                on: false,
+                emitZone: { type: 'edge', source: vars.graphics.infinity },
+                on: false
             });
         },
 
@@ -2190,7 +2220,7 @@ var vars = {
             allPoints.topSquare = points;
 
             let pG = Phaser.Geom.Polygon;
-            rectangles = [];
+            let rectangles = [];
             rectangles.push(new pG(allPoints.bottomSquare));
             rectangles.push(new pG(allPoints.middleSquare));
             rectangles.push(new pG(allPoints.topSquare));
@@ -2254,7 +2284,7 @@ var vars = {
 
         betterLuckFn: ()=> {
             vars.DEBUG ? console.log(' 🏋🎲...Better Luck Function') : null;
-            return shuffle([1,2])[0] === 1 ? 'dice1' : frameName = shuffle(Phaser.Utils.Array.NumberArray(2,4,'dice'))[0];
+            return shuffle([1,2])[0] === 1 ? 'dice1' : shuffle(Phaser.Utils.Array.NumberArray(2,4,'dice'))[0];
         },
 
         checkZeroProtection: (_player=vars.player.current)=> {
