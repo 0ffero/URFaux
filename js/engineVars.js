@@ -9,7 +9,7 @@ vars.init = (stage=1)=> { // ENTRY POINT IS HERE
 
     if (stage===2) { // creation
         // init the cursor pointer
-        scene.add.image(vars.canvas.cX, vars.canvas.cY, 'pointers','pointerP1').setName('pointer').setDepth(consts.depths.pointer).setOrigin(0); // this should be on top of everything.
+        scene.add.image(vars.canvas.cX, vars.canvas.cY, 'pointers','pointerP1').setAlpha(0).setName('pointer').setDepth(consts.depths.pointer).setOrigin(0); // this should be on top of everything.
         v.containers.init(); // set up containers
         v.groups.init(); // set up groups
 
@@ -17,6 +17,8 @@ vars.init = (stage=1)=> { // ENTRY POINT IS HERE
         v.audio.init();
         v.camera.init();
         v.input.init();
+        // we are now hiding the pointer initially
+
         v.particles.init();
         v.UI.initErrorScreen();
     }
@@ -30,9 +32,13 @@ vars.init = (stage=1)=> { // ENTRY POINT IS HERE
     }
     
     if (stage===4) {
-        v.UI.initGameScreen();
-        v.atmos.init();
-        v.DEBUG ? v.debugFN.attackLaneInit() : null;
+        // delay for new fadeout effect
+        setTimeout( ()=> {
+            v.UI.initGameScreen();
+            v.atmos.init();
+            v.DEBUG ? v.debugFN.attackLaneInit() : null;
+        },750);
+        
     }
 }
 
@@ -155,25 +161,26 @@ vars.files = {
 
     images: {
         init: ()=> {
-            scene.load.image('boardBG',        'images/board.png');
-            scene.load.image('loadedBG',       'images/loadedScreen.jpg');
-            scene.load.image('loadedButton',   'images/loaded.png');
-            scene.load.image('playButtonBG',   'images/playButtonBG.jpg');
-            scene.load.image('sandBG',         'images/sand.jpg');
-            scene.load.image('sandMask',       'images/sandMask.png');
-            scene.load.image('scoreBlocks',    'images/scoreBlocks.png');
-            scene.load.image('shielded',       'images/shielded.png');
-            scene.load.image('whitePixel',     'images/whitePixel.png');
+            scene.load.image('boardBG',       'images/board.png');
+            scene.load.image('loadedBG',      'images/loadedScreen.png');
+            scene.load.image('loadedButton',  'images/loaded.png');
+            scene.load.image('playButtonBG',  'images/playButtonBG.jpg');
+            scene.load.image('sandBG',        'images/sand.jpg');
+            scene.load.image('sandMask',      'images/sandMask.png');
+            scene.load.image('scoreBlocks',   'images/scoreBlocks.png');
+            scene.load.image('shielded',      'images/shielded.png');
+            scene.load.image('title',         'images/title.png');
+            scene.load.image('whitePixel',    'images/whitePixel.png');
             
-            scene.load.atlas('clouds',         'images/atmos/clouds.png',   'images/atmos/clouds.json');
-            scene.load.atlas('counters',       'images/counters.png',       'images/counters.json');
-            scene.load.atlas('dice',           'images/dice.png',           'images/dice.json');
-            scene.load.atlas('lightning',      'images/atmos/lightning.png','images/atmos/lightning.json');
-            scene.load.atlas('options',        'images/optionImages.png',   'images/optionImages.json');
-            scene.load.atlas('optionsVolume',  'images/optionsVolume.png',  'images/optionsVolume.json');
-            scene.load.atlas('playAgain',      'images/playAgain.png',      'images/playAgain.json');
-            scene.load.atlas('pointers',       'images/pointers.png',       'images/pointers.json');
-            scene.load.atlas('fullScreenBtn',  'images/screenMaxMin.png',   'images/screenMaxMin.json');
+            scene.load.atlas('clouds',        'images/atmos/clouds.png',   'images/atmos/clouds.json');
+            scene.load.atlas('counters',      'images/counters.png',       'images/counters.json');
+            scene.load.atlas('dice',          'images/dice.png',           'images/dice.json');
+            scene.load.atlas('lightning',     'images/atmos/lightning.png','images/atmos/lightning.json');
+            scene.load.atlas('options',       'images/optionImages.png',   'images/optionImages.json');
+            scene.load.atlas('optionsVolume', 'images/optionsVolume.png',  'images/optionsVolume.json');
+            scene.load.atlas('playAgain',     'images/playAgain.png',      'images/playAgain.json');
+            scene.load.atlas('pointers',      'images/pointers.png',       'images/pointers.json');
+            scene.load.atlas('fullScreenBtn', 'images/screenMaxMin.png',   'images/screenMaxMin.json');
 
             // particles
             scene.load.image('diamondInTheRough', 'particles/whiteFlare.png');
@@ -316,6 +323,20 @@ vars.phaserObject.logoSource = {
 
         } while (pixel.alpha < 255);
         return vec.setTo(x + origin.x, y + origin.y);
+    }
+}
+
+vars.phaserObject.title = {
+    getRandomPoint: function (vec) {
+        let x; let y; let pixel;
+        let origins = quickGet('title').getTopLeft()
+        do {
+            x = Phaser.Math.Between(0, 898);
+            y = Phaser.Math.Between(0, 653);
+            pixel = scene.textures.getPixel(x, y, 'title');
+        } while ((pixel.red< 160 && pixel.blue<160) && Phaser.Math.Within(pixel.red, pixel.blue, 80));
+
+        return vec.setTo(origins.x+x,origins.y+y);
     }
 }
 

@@ -24,7 +24,7 @@ vars.debugFN = {
         let bPs = vars.boardPositions;
 
         // place the white counters
-        ['w4','a2'].forEach( (_a,_i)=> {
+        ['w5','w6','a5','a6','a7','a8'].forEach( (_a,_i)=> {
             let cName = vars.player.counters.white.atStart.pop();// `counterw_${6-_i}`;
             if (_a==='a4') { quickGet('shield_1').setData('currentHue', 0); vars.particles.shieldSwitchColour(cName); }
             bPs[_a].takenByPlayer=1;

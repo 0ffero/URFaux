@@ -68,6 +68,7 @@ fetch("./assets/fileList.json").then(response => {
 */
 var startTime = new Date();
 function preload() {
+    consts.colours.hex.grays === undefined ? consts.colours.init() : null; // if the grays arent initialised...
     this.load.plugin('rexoutlinepipelineplugin', 'js/frameworks/rexoutlinepipelineplugin.min.js', true);
     // var pipelineInstance = scene.plugins.get('rexoutlinepipelineplugin').add(gameObject, config); // <-- used when attaching to an image. This plug in has image outline!
     scene = this;
@@ -81,18 +82,15 @@ function preload() {
     let gPV = vars.graphics.progress;
     let bar = gPV.bar; bar.object = scene.add.graphics().setDepth(dDepth);
     let box = gPV.box; box.object = scene.add.graphics().setDepth(dDepth-1);
-    consts.colours.hex.grays === undefined ? consts.colours.init() : null; // if the grays arent initialised...
-    let gray = consts.colours.hex.grays[2];
-    box.object.fillStyle(gray, 0.8);
-    box.object.fillRect(vars.canvas.cX-box.width/2, vars.canvas.height*0.85, box.width, box.height);
+    box.object.fillStyle(0x4DD2FE, 0.8);
+    box.object.fillRect(vars.canvas.cX-box.width/2, vars.canvas.height*0.92, box.width, box.height);
 
     // when a file loads, update the progress bar
     scene.load.on('load', (_fileData)=> { vars.animate.loadingBarProgressUpdate(_fileData); })
     // add the loading screen and fade it in
     let depth = consts.depths.loading;
-    let loadingBG = scene.add.image(vars.canvas.cX,-500,'loadingBG').setOrigin(0.5,0).setName('loadingBG').setDepth(depth);
-    scene.tweens.add({ targets: loadingBG, y: 0, duration: 1500, ease: 'Quad' })
-    scene.add.image(vars.canvas.cX, vars.canvas.cY, 'loadingText').setName('loadingText').setDepth(depth+1);
+    scene.add.image(vars.canvas.cX,0,'loadingBG').setOrigin(0.5,0).setName('loadingBG').setDepth(depth);
+    scene.add.image(vars.canvas.cX, vars.canvas.cY+300, 'loadingText').setName('loadingText').setDepth(depth+1);
 
     // start loading all the assets
     scene.load.setPath('assets');

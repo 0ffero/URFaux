@@ -2,7 +2,7 @@
 var vars = {
     DEBUG: false,
 
-    version: '0.99.b1.3',
+    version: '0.99.b2.0',
 
     clamp: Phaser.Math.Clamp,
 
@@ -229,11 +229,11 @@ var vars = {
         diceDrop: (_targets)=> {
             vars.DEBUG ? console.log(`Dropping the dice.`) : null;
             let dur = 1000;
-            if (vars.DEBUG) { dur=0; }
+            let emitters = vars.particles.available.dice.emitters.getAll();
             _targets.forEach( (_t,i)=>{
                 scene.tweens.add({
                     targets: _t, scale: 1, duration: dur, delay: dur*i, ease: 'Quint.easeIn',
-                    onComplete: ()=> { vars.audio.playSound('sandHit'); vars.particles.available.sand.emitParticleAt(_t.x, _t.y); }
+                    onComplete: ()=> { vars.audio.playSound('sandHit'); vars.particles.available.sand.emitParticleAt(_t.x, _t.y); emitters[i].start(); }
                 })
             })
 
@@ -395,8 +395,8 @@ var vars = {
                 // refresh the loading bar graphic
                 bar.object.clear();
                 let grays = consts.colours.hex.grays;
-                bar.object.fillStyle(grays[grays.length-1], 1);
-                bar.object.fillRect(vars.canvas.cX-bar.width/2, vars.canvas.height*0.85+10, bar.width * loadedPercent, bar.height);
+                bar.object.fillStyle(0x015E7C, 1);
+                bar.object.fillRect(vars.canvas.cX-bar.width/2, vars.canvas.height*0.92+10, bar.width * loadedPercent, bar.height);
 
                 if (scene.load.progress===1) {
                     vars.DEBUG ? console.log(`Finished loading files.`) : null;
@@ -423,7 +423,7 @@ var vars = {
 
         loadingImageSwitch: ()=> {
             let duration = 1000;
-            if (vars.DEBUG) { duration = 0; }
+            //if (vars.DEBUG) { duration = 0; }
             let depth = consts.depths.loading;
             // fade out the loading text
             let oldText = vars.phaserObject.quickGet('loadingText');
@@ -436,11 +436,15 @@ var vars = {
             // and show the new loaded image and start button
             let cV = vars.canvas;
             let newImage = scene.add.image(cV.cX, 0, 'loadedBG').setOrigin(0.5,0).setName('loadedBG').setAlpha(0).setDepth(depth);
-            let loadedButton = scene.add.image(cV.cX, cV.cY, 'loadedButton').setName('loadedButton').setAlpha(0).setDepth(depth+1).setInteractive();
+            let loadedButton = scene.add.image(cV.cX, cV.cY+333, 'loadedButton').setName('loadedButton').setAlpha(0).setDepth(depth+1).setInteractive();
+            let title = scene.add.image(vars.canvas.cX-8, 372, 'title').setName('title').setDepth(depth+1).setAlpha(0);
             // fade in the loaded image
-            scene.tweens.add({ targets: newImage, alpha: 1, duration: duration*2 })
+            scene.tweens.add({ targets: [newImage, title], alpha: 1, duration: duration*2 })
+            setTimeout( ()=> {
+                vars.particles.titleEnable();
+            },duration/2);
 
-            scene.tweens.add({ targets: loadedButton, alpha: 1, duration: duration*2, delay: duration*2 })
+            scene.tweens.add({ targets: loadedButton, alpha: 1, duration: duration, delay: duration, onComplete: ()=> { vars.phaserObject.quickGet('pointer').setAlpha(1); vars.particles.available.pointer.on=true; } })
         },
 
         movableCounterBounce: (_o)=> {
@@ -574,7 +578,7 @@ var vars = {
         showOptions: (_show=true)=> {
             // fade in/out the options
             let alpha = _show ? 1: 0;
-            let duration = 500;
+            let duration = 1000;
             scene.groups.options.children.each( (_o)=> {
                 let delay = 0;
                 if (alpha===0) { // if were fading out the delay should be on the background
@@ -1651,6 +1655,8 @@ var vars = {
         highlightObject: (_oName, _glow=0x4DD2FF, _thick=3)=> {
             // grab it
             let gameObject = vars.phaserObject.quickGet(_oName);
+            if (gameObject.alpha!==1) { return false; }
+
             // highlight it
             scene.plugins.get('rexoutlinepipelineplugin').add(gameObject).setOutlineColor(_glow).setThickness(_thick);
             // remember it (required in case objects overlap each other)
@@ -1660,15 +1666,13 @@ var vars = {
         highlightedObjectReset: (_oName)=> {
             let highlighted = vars.graphics.highlighted;
             // check that this is the object that was highlighted
-            if (highlighted===_oName) {
+            if (highlighted===_oName && highlighted) {
                 vars.graphics.highlighted = null;
-                let gameObject = vars.phaserObject.quickGet(highlighted)
+                let gameObject = vars.phaserObject.quickGet(highlighted);
                 scene.plugins.get('rexoutlinepipelineplugin').remove(gameObject);
             } else {
-                console.error(`Highlighted object sent to updater (${_oName}) is not the same as the h var (${highlighted})`);
-                // this happens every so often and its generally a counter that hasnt had the outline removed
                 // every counter is reset now when the player clicks a counter
-                debugger;
+                // an error here now means nothing, as the rex outline is being removed more efficiently now that I know the game objects that are using it
             }
         },
 
@@ -1806,6 +1810,7 @@ var vars = {
                 // roll dice
                 vars.game.rollDice();
             } else if (oName==='loadedButton') {
+                if (vars.phaserObject.quickGet('loadedButton').alpha!==1) { return false; }
                 console.clear();
                 setTimeout( ()=> {
                     vars.input.clickedOn=null;
@@ -1816,8 +1821,10 @@ var vars = {
                 // then start the game
                 let bg = vars.phaserObject.quickGet('loadedBG');
                 let btn = vars.phaserObject.quickGet('loadedButton');
-                let dur = vars.DEBUG ? 0 : 500;
-                scene.tweens.add({ targets: [bg,btn], alpha: 0, duration: dur, onComplete: vars.phaserObject.destroy })
+                let ttl = vars.phaserObject.quickGet('title');
+                let dur = 1000;
+                scene.tweens.add({ targets: [bg,btn,ttl], alpha: 0, duration: dur, onComplete: vars.phaserObject.destroy })
+                vars.particles.titleEnable(false);
 
                 // make the loaded button explode into sand
                 vars.input.clickedOn = 'loadedButton';
@@ -1978,6 +1985,8 @@ var vars = {
             // shield
             pV.shieldInit();
 
+            // title sparkle
+            pV.titleInit();
 
             // this can be enabled to test particle emitters
             /* scene.input.on('pointerdown', function (pointer) {
@@ -2121,7 +2130,8 @@ var vars = {
                 scale: { min: 0.05, max: 0.5 },
                 alpha: { start: 0.5, end: 0 },
                 blendMode: 'ADD',
-                lifespan: 1000
+                lifespan: 1000,
+                on: false
             });
             vars.particles.available.pointer.reserve(1000);
         },
@@ -2256,6 +2266,26 @@ var vars = {
             })
             // enable the particles
             pV.shieldEnable();
+        },
+
+        titleEnable: (_enable=true)=> {
+            let emitter = vars.particles.available.title.emitters.list[0];
+            _enable ? emitter.start() : emitter.stop();
+        },
+
+        titleInit: ()=> {
+            let depth = 255;
+            vars.particles.available.title = scene.add.particles('diamondInTheRough').setDepth(depth);
+
+            vars.particles.available.title.createEmitter({
+                x: 0, y: 0, // these are passed in via emitzone below
+                frequency: 1, quantity: 20, lifespan: 1000, gravityY: 1,
+                scale: { start: 0, end: 0.1, ease: 'Quad.easeOut' },
+                alpha: { start: 1, end: 0, ease: 'Quad.easeIn' },
+                blendMode: 'ADD',
+                emitZone: { type: 'random', source: vars.phaserObject.title },
+                on: false
+            });
         }
     },
 
@@ -2513,12 +2543,11 @@ var vars = {
             // scores
             let y = 820;
             scene.add.image(1220,y+40,'scoreBlocks').setDepth(diceBGDepth);
-            scene.add.text(1093, y, '0', { fontSize: '100px', fontStyle: 'bold', stroke: '#9C4534', strokeThickness: 5 } ).setName('p1score').setDepth(diceBGDepth+1).setAngle(-2);
-            scene.add.text(1280, y, '0', { fontSize: '100px', fontStyle: 'bold', stroke: '#1A4792', strokeThickness: 5 } ).setName('p2score').setDepth(diceBGDepth+1).setAngle(2);
+            scene.add.text(1093, y-22, '0', { fontSize: '100px', fontStyle: 'bold', stroke: '#9C4534', strokeThickness: 5 } ).setName('p1score').setDepth(diceBGDepth+1).setAngle(-2);
+            scene.add.text(1280, y-25, '0', { fontSize: '100px', fontStyle: 'bold', stroke: '#1A4792', strokeThickness: 5 } ).setName('p2score').setDepth(diceBGDepth+1).setAngle(2);
 
             // pop up bg
             scene.add.image(cV.cX, cV.cY, 'whitePixel').setName('popupBG').setTint('#000').setScale(vars.canvas.width, vars.canvas.height).setDepth(msgDepth-1).setAlpha(0);
-            //scene.add.text(vars.canvas.cX, vars.canvas.cY, '...').setName('popupText').setColor('#ff0').setFontSize(96).setFontStyle('bold').setFontFamily('Consolas').setAlign('center').setAlpha(0).setDepth(msgDepth).setShadow(8,8,'#000',2);
             scene.add.bitmapText(cV.cX, cV.cY, 'defaultFont', '...', 128, 1).setAlpha(0).setName('popupText').setDepth(msgDepth).setOrigin(0.5);
 
             // barrier for a4
@@ -2531,7 +2560,7 @@ var vars = {
 
             // change the colour of the dice highlight
             vars.particles.diceHighlightChangeColor(); // this is required as youll eventually be able to continue a game. so the first player to go wont always be player 1
-            vars.particles.diceHighlightOnOff();
+            // the particles are now set to visible after they drop
         },
 
         initOptionsScreen: ()=> {
@@ -2539,21 +2568,20 @@ var vars = {
             scene.groups.options = scene.add.group();
             let cV = vars.canvas;
             let offsetX = 350;
-            let p1x = cV.cX - offsetX;
-            let p2x = cV.cX + offsetX;
-            let tY = 0 + 550;
-            let pY = 0 + 300;
+            let p1x = cV.cX - offsetX; let p2x = cV.cX + offsetX;
+            let tY = 0 + 550; let pY = 0 + 300;
 
+            let texture ='options';
             let bg = scene.add.image(cV.cX, cV.cY, 'whitePixel').setName('opt_BG').setTint(0x0).setDepth(depth-1).setScale(vars.canvas.width, vars.canvas.height);
-            let p1Title = scene.add.image(p1x, tY, 'options').setName('opt_p1t').setFrame('optPlayer1').setDepth(depth);
-            let p2Title = scene.add.image(p2x, tY, 'options').setName('opt_p2t').setFrame('optPlayer2').setDepth(depth);
-            let p1Image = scene.add.image(p1x, pY, 'options').setName('opt_p1i').setFrame('faceMale').setDepth(depth);
-            let p2Image = scene.add.image(p2x, pY, 'options').setName('opt_p2i').setFrame('faceFemale').setDepth(depth);
+            let p1Title = scene.add.image(p1x, tY, texture).setName('opt_p1t').setFrame('optPlayer1').setDepth(depth);
+            let p2Title = scene.add.image(p2x, tY, texture).setName('opt_p2t').setFrame('optPlayer2').setDepth(depth);
+            let p1Image = scene.add.image(p1x, pY, texture).setName('opt_p1i').setFrame('faceMale').setDepth(depth);
+            let p2Image = scene.add.image(p2x, pY, texture).setName('opt_p2i').setFrame('faceFemale').setDepth(depth);
             
-            let optPlay = scene.add.image(cV.cX, cV.height-200, 'options').setFrame('optPlay').setName('optPlay').setDepth(depth+1).setInteractive();
+            let optPlay = scene.add.image(cV.cX, cV.height-200, texture).setFrame('optPlay').setName('optPlay').setDepth(depth+1).setInteractive();
             let optPlayBG = scene.add.image(815, 810, 'playButtonBG').setOrigin(0).setCrop(0,0,290,140).setDepth(depth).setName('playButtonBG').setData({ x: 815 });
             vars.animate.playButtonBG();
-            let optPlayText = scene.add.image(cV.cX, cV.height-200, 'options').setFrame('optPlayText').setName('optPlayText').setDepth(depth+2);
+            let optPlayText = scene.add.image(cV.cX, cV.height-200, texture).setFrame('optPlayText').setName('optPlayText').setDepth(depth+2);
 
             scene.groups.options.addMultiple([bg,p1Title,p2Title,p1Image,p2Image,optPlay,optPlayBG,optPlayText]);
 
@@ -2562,7 +2590,7 @@ var vars = {
             [p1Image,p2Image].forEach( (_p)=> {
                 ['optArrowLeft','optArrowRight'].forEach( (_a)=> {
                     let x = _a.includes('Left') ? _p.x-250 : _p.x+250;
-                    let arrow = scene.add.image(x, y, 'options').setFrame(_a).setName(`${_a}_${_p.name.replace('opt_','')}`).setDepth(depth).setInteractive().setData({ over: false });
+                    let arrow = scene.add.image(x, y, texture).setFrame(_a).setName(`${_a}_${_p.name.replace('opt_','')}`).setDepth(depth).setInteractive().setData({ over: false });
                     scene.groups.options.add(arrow);
                 })
             })
@@ -2574,19 +2602,21 @@ var vars = {
             let container = scene.containers.volumeOptions;
 
             // add a background
-            let bg = scene.add.image(0,0,'whitePixel').setName('volOptBG').setScale(vars.canvas.width, 200).setTint(0x0).setAlpha(0.8).setOrigin(0).setInteractive();
+            let wp = 'whitePixel';
+            let bg = scene.add.image(0,0,wp).setName('volOptBG').setScale(vars.canvas.width, 200).setTint(0x0).setAlpha(0.8).setOrigin(0).setInteractive();
             // add the 3 volume buttons
-            let volMute = scene.add.image(100, 100, 'optionsVolume').setFrame('volumeMute').setName('volMute').setInteractive();
-            let volDown = scene.add.image(250, 100, 'optionsVolume').setFrame('volumeDown').setName('volumeDown').setInteractive();
-            let volUp = scene.add.image(400, 100, 'optionsVolume').setFrame('volumeUp').setName('volumeUp').setInteractive();
+            let texture = 'optionsVolume';
+            let volMute = scene.add.image(100, 100, texture).setFrame('volumeMute').setName('volMute').setInteractive();
+            let volDown = scene.add.image(250, 100, texture).setFrame('volumeDown').setName('volumeDown').setInteractive();
+            let volUp = scene.add.image(400, 100, texture).setFrame('volumeUp').setName('volumeUp').setInteractive();
 
             let w = 620; let h = 70;
             let x = 550; let y = 100;
-            let volbarBG = scene.add.image(x, y, 'whitePixel').setTint(0x0000B2).setName('gfx_volBarBG').setScale(w,h).setOrigin(0,0.5);
+            let volbarBG = scene.add.image(x, y, wp).setTint(0x0000B2).setName('gfx_volBarBG').setScale(w,h).setOrigin(0,0.5);
 
             w = 600; h = 50;
             w*=vars.audio.volume.phaser;
-            let volbar = scene.add.image(x+10, y, 'whitePixel').setTint(0x31D2F7).setName('gfx_volBar').setScale(w,h).setOrigin(0,0.5);
+            let volbar = scene.add.image(x+10, y, wp).setTint(0x31D2F7).setName('gfx_volBar').setScale(w,h).setOrigin(0,0.5);
 
             // min/max button
             let minMax = scene.add.image(vars.canvas.width-10, y, 'fullScreenBtn').setName('minMaxButton').setFrame('maxButton').setOrigin(1,0.5).setInteractive();
